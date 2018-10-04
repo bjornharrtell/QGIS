@@ -177,6 +177,7 @@
      <addaction name="mActionAddDelimitedText"/>
      <addaction name="mActionAddPgLayer"/>
      <addaction name="mActionAddSpatiaLiteLayer"/>
+     <addaction name="mActionAddFlatGeobufLayer"/>
      <addaction name="mActionAddMssqlLayer"/>
      <addaction name="mActionAddDb2Layer"/>
      <addaction name="mActionAddOracleLayer"/>
@@ -430,6 +431,7 @@
    <addaction name="mActionAddMeshLayer"/>
    <addaction name="mActionAddDelimitedText"/>
    <addaction name="mActionAddSpatiaLiteLayer"/>
+   <addaction name="mActionAddFlatGeobufLayer"/>
    <addaction name="mActionAddVirtualLayer"/>
    <addaction name="mActionAddWmsLayer"/>
    <addaction name="mActionAddWcsLayer"/>
@@ -1522,6 +1524,15 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+L</string>
+   </property>
+  </action>
+  <action name="mActionAddFlatGeobufLayer">
+   <property name="icon">
+    <iconset resource="../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionAddSpatiaLiteLayer.svg</normaloff>:/images/themes/default/mActionAddSpatiaLiteLayer.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add FlatGeobuf Layer...</string>
    </property>
   </action>
   <action name="mActionAddMssqlLayer">
