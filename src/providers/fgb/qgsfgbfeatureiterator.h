@@ -1,9 +1,10 @@
 /***************************************************************************
-    qgsgpxfeatureiterator.h
-    ---------------------
-    begin                : Dezember 2012
-    copyright            : (C) 2012 by Martin Dobias
-    email                : wonder dot sk at gmail dot com
+  qgsfeatureiterator.cpp
+
+ ---------------------
+ begin                : October 2018
+ copyright            : (C) 2018 by Björn Harrtell
+ email                : bjorn at wololo org
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *

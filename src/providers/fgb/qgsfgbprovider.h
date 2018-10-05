@@ -1,14 +1,11 @@
 /***************************************************************************
-      qgsgpxprovider.h  -  Data provider for GPS eXchange files
-                             -------------------
-    begin                : 2004-04-14
-    copyright            : (C) 2004 by Lars Luthman
-    email                : larsl@users.sourceforge.net
+  qgsfgbprovider.h - Data provider for FlatGeobuf files
 
-    Partly based on qgsdelimitedtextprovider.h, (C) 2004 Gary E. Sherman
- ***************************************************************************/
-
-/***************************************************************************
+ ---------------------
+ begin                : October 2018
+ copyright            : (C) 2018 by Björn Harrtell
+ email                : bjorn at wololo org
+ ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,7 +29,7 @@ class QgsFGBFeatureIterator;
 
 /**
 \class QgsFGBProvider
-\brief Data provider for FGB (GPS eXchange) files
+\brief Data provider for FGB files
 * This provider adds the ability to load FGB files as vector layers.
 *
 */

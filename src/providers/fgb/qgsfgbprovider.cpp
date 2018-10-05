@@ -1,14 +1,11 @@
 /***************************************************************************
-      qgsgpxprovider.cpp  -  Data provider for GPS eXchange files
-                             -------------------
-    begin                : 2004-04-14
-    copyright            : (C) 2004 by Lars Luthman
-    email                : larsl@users.sourceforge.net
+  qgsfgbprovider.cpp - Data provider for FlatGeobuf files
 
-    Partly based on qgsdelimitedtextprovider.cpp, (C) 2004 Gary E. Sherman
- ***************************************************************************/
-
-/***************************************************************************
+ ---------------------
+ begin                : October 2018
+ copyright            : (C) 2018 by Björn Harrtell
+ email                : bjorn at wololo org
+ ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -43,6 +40,12 @@
 
 #include "qgsfgbfeatureiterator.h"
 #include "qgsfgbprovider.h"
+
+#ifdef HAVE_GUI
+#include "qgssourceselectprovider.h"
+#include "qgsfgbsourceselect.h"
+#endif
+
 
 const QString FGB_KEY = QStringLiteral( "fgb" );
 
@@ -196,3 +199,31 @@ QGISEXTERN bool isProvider()
 }
 
 
+
+#ifdef HAVE_GUI
+
+class QgsFgbSourceSelectProvider : public QgsSourceSelectProvider
+{
+  public:
+
+    QString providerKey() const override { return QStringLiteral( "fgb" ); }
+    QString text() const override { return QObject::tr( "Vector" ); }
+    int ordering() const override { return QgsSourceSelectProvider::OrderLocalProvider + 20; }
+    QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddVectorLayer.svg" ) ); }
+    QgsAbstractDataSourceWidget *createDataSourceWidget( QWidget *parent = nullptr, Qt::WindowFlags fl = Qt::Widget, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::Embedded ) const override
+    {
+      return new QgsFgbSourceSelect( parent, fl, widgetMode );
+    }
+};
+
+QGISEXTERN QList<QgsSourceSelectProvider *> *sourceSelectProviders()
+{
+  QList<QgsSourceSelectProvider *> *providers = new QList<QgsSourceSelectProvider *>();
+
+  *providers
+      << new QgsFgbSourceSelectProvider;
+
+  return providers;
+}
+
+#endif
