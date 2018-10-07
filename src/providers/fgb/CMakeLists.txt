@@ -2,12 +2,15 @@
 ########################################################
 # Files
 
+ADD_SUBDIRECTORY(flatbuffers)
+
 SET (FGB_SRCS
   qgsfgbfeatureiterator.cpp
   qgsfgbprovider.cpp
 )
 
-SET (DTEXT_MOC_HDRS
+SET (FGB_MOC_HDRS
+  flatgeobuf_generated.h
   qgsfgbprovider.h
 )
 
@@ -15,7 +18,7 @@ IF (WITH_GUI)
   SET(FGB_SRCS ${FGB_SRCS}
     qgsfgbsourceselect.cpp
   )
-  SET(DTEXT_MOC_HDRS ${DTEXT_MOC_HDRS}
+  SET(FGB_MOC_HDRS ${FGB_MOC_HDRS}
     qgsfgbsourceselect.h
   )
 ENDIF ()
@@ -33,13 +36,16 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/gui
   ${CMAKE_BINARY_DIR}/src/ui
+
+  flatbuffers
+  ./
 )
 INCLUDE_DIRECTORIES (SYSTEM
 )
 
-QT5_WRAP_CPP(DTEXT_MOC_SRCS ${DTEXT_MOC_HDRS})
+QT5_WRAP_CPP(FGB_MOC_SRCS ${FGB_MOC_HDRS})
 
-ADD_LIBRARY(fgbprovider MODULE ${FGB_SRCS} ${DTEXT_MOC_SRCS})
+ADD_LIBRARY(fgbprovider MODULE ${FGB_SRCS} ${FGB_MOC_SRCS})
 
 TARGET_LINK_LIBRARIES(fgbprovider
   qgis_core

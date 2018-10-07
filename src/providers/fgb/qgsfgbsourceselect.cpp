@@ -29,12 +29,29 @@ QgsFgbSourceSelect::QgsFgbSourceSelect(QWidget *parent, Qt::WindowFlags fl, QgsP
 
   QgsSettings settings;
 
-  // setWindowTitle( tr( "Add Layer" ).arg( name( ) ) );
+  connect( mFileWidget, &QgsFileWidget::fileChanged, this, [ = ]( const QString & path )
+  {
+    mPath = path;
+    emit enableButtons( ! mPath.isEmpty() );
+  } );
 }
 
 QgsFgbSourceSelect::~QgsFgbSourceSelect()
 {
   QgsSettings settings;
+}
+
+void QgsFgbSourceSelect::addButtonClicked()
+{
+  if (mPath.isEmpty()) {
+      QMessageBox::information( this,
+                                tr( "Add vector layer" ),
+                                tr( "No path selected." ) );
+      return;
+  }
+  else {
+    emit addVectorLayer(mPath, NULL, QStringLiteral( "fgb" ) );
+  }
 }
 
 void QgsFgbSourceSelect::showHelp()

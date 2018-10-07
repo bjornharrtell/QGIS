@@ -31,7 +31,7 @@ class QgsFgbSourceSelect: public QgsAbstractDataSourceWidget, private Ui::QgsFgb
     ~QgsFgbSourceSelect() override;
 
   public slots:
-
+    void addButtonClicked() override;
     void showHelp();
 
   private:

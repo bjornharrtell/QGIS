@@ -1,5 +1,5 @@
 /***************************************************************************
-  qgsfgbprovider.cpp - Data provider for FlatGeobuf files
+  QgsFgbProvider.cpp - Data provider for FlatGeobuf files
 
  ---------------------
  begin                : October 2018
@@ -52,51 +52,46 @@ const QString FGB_KEY = QStringLiteral( "fgb" );
 const QString FGB_DESCRIPTION = QObject::tr( "FlatGeobuf format provider" );
 
 
-QgsFGBProvider::QgsFGBProvider( const QString &uri, const ProviderOptions &options )
+QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &options )
   : QgsVectorDataProvider( uri, options )
 {
   // we always use UTF-8
   setEncoding( QStringLiteral( "utf8" ) );
 
-  // get the file name and the type parameter from the URI
-  int fileNameEnd = uri.indexOf( '?' );
-  if ( fileNameEnd == -1 || uri.mid( fileNameEnd + 1, 5 ) != QLatin1String( "type=" ) )
+  // TODO: parse the file
+  mFileName = uri;
+
+  QFile file( uri );
+  if ( !file.open( QIODevice::ReadOnly ) )
   {
-    QgsLogger::warning( tr( "Bad URI - you need to specify the feature type." ) );
+    QgsLogger::warning( QObject::tr( "Couldn't open the data source: %1" ).arg( uri ) );
     return;
   }
-  QString typeStr = uri.mid( fileNameEnd + 6 );
-
-  // TODO: set up the attributes and the geometry type depending on the feature type
-
-  mFileName = uri.left( fileNameEnd );
-
-  // TODO: parse the file
 
   mValid = true;
 }
 
 
-QgsFGBProvider::~QgsFGBProvider()
+QgsFgbProvider::~QgsFgbProvider()
 {
   // TODO: cleanup
 }
 
 
-QgsAbstractFeatureSource *QgsFGBProvider::featureSource() const
+QgsAbstractFeatureSource *QgsFgbProvider::featureSource() const
 {
-  return new QgsFGBFeatureSource( this );
+  return new QgsFgbFeatureSource( this );
 }
 
 
-QString QgsFGBProvider::storageType() const
+QString QgsFgbProvider::storageType() const
 {
   return tr( "FlatGeobuf file" );
 }
 
 
 // Return the extent of the layer
-QgsRectangle QgsFGBProvider::extent() const
+QgsRectangle QgsFgbProvider::extent() const
 {
   // TODO: impl
   return QgsRectangle();
@@ -106,7 +101,7 @@ QgsRectangle QgsFGBProvider::extent() const
 /**
  * Returns the feature type
  */
-QgsWkbTypes::Type QgsFGBProvider::wkbType() const
+QgsWkbTypes::Type QgsFgbProvider::wkbType() const
 {
   // TODO: impl
   return QgsWkbTypes::Point;
@@ -118,44 +113,44 @@ QgsWkbTypes::Type QgsFGBProvider::wkbType() const
 /**
  * Returns the feature count
  */
-long QgsFGBProvider::featureCount() const
+long QgsFgbProvider::featureCount() const
 {
   // TODO: impl
   return 0;
 }
 
 
-QgsFields QgsFGBProvider::fields() const
+QgsFields QgsFgbProvider::fields() const
 {
   return attributeFields;
 }
 
 
-bool QgsFGBProvider::isValid() const
+bool QgsFgbProvider::isValid() const
 {
   return mValid;
 }
 
 
-QgsFeatureIterator QgsFGBProvider::getFeatures( const QgsFeatureRequest &request ) const
+QgsFeatureIterator QgsFgbProvider::getFeatures( const QgsFeatureRequest &request ) const
 {
-  return QgsFeatureIterator( new QgsFGBFeatureIterator( new QgsFGBFeatureSource( this ), true, request ) );
+  return QgsFeatureIterator( new QgsFgbFeatureIterator( new QgsFgbFeatureSource( this ), true, request ) );
 }
 
 
-QString QgsFGBProvider::name() const
+QString QgsFgbProvider::name() const
 {
   return FGB_KEY;
-} // QgsFGBProvider::name()
+} // QgsFgbProvider::name()
 
 
-QString QgsFGBProvider::description() const
+QString QgsFgbProvider::description() const
 {
   return FGB_DESCRIPTION;
-} // QgsFGBProvider::description()
+} // QgsFgbProvider::description()
 
 
-QgsCoordinateReferenceSystem QgsFGBProvider::crs() const
+QgsCoordinateReferenceSystem QgsFgbProvider::crs() const
 {
   return QgsCoordinateReferenceSystem( GEOSRID, QgsCoordinateReferenceSystem::PostgisCrsId ); // use WGS84
 }
@@ -163,11 +158,11 @@ QgsCoordinateReferenceSystem QgsFGBProvider::crs() const
 
 /**
  * Class factory to return a pointer to a newly created
- * QgsFGBProvider object
+ * QgsFgbProvider object
  */
-QGISEXTERN QgsFGBProvider *classFactory( const QString *uri, const QgsDataProvider::ProviderOptions &options )
+QGISEXTERN QgsFgbProvider *classFactory( const QString *uri, const QgsDataProvider::ProviderOptions &options )
 {
-  return new QgsFGBProvider( *uri, options );
+  return new QgsFgbProvider( *uri, options );
 }
 
 

@@ -16,19 +16,22 @@
 #ifndef QGSFGBFEATUREITERATOR_H
 #define QGSFGBFEATUREITERATOR_H
 
-#include "qgsfeatureiterator.h"
+#include <QFile>
+#include <QDataStream>
 
+#include "qgsfeatureiterator.h"
 #include "qgsfgbprovider.h"
 
-class QgsFGBProvider;
+class QgsFgbProvider;
 
 
-class QgsFGBFeatureSource : public QgsAbstractFeatureSource
+class QgsFgbFeatureSource : public QgsAbstractFeatureSource
 {
   public:
-    explicit QgsFGBFeatureSource( const QgsFGBProvider *p );
-    ~QgsFGBFeatureSource() override;
+    explicit QgsFgbFeatureSource( const QgsFgbProvider *p );
+    ~QgsFgbFeatureSource() override;
 
+    QFile* getFile();
     QgsFeatureIterator getFeatures( const QgsFeatureRequest &request ) override;
 
   private:
@@ -36,25 +39,26 @@ class QgsFGBFeatureSource : public QgsAbstractFeatureSource
     QgsFields mFields;
     QgsCoordinateReferenceSystem mCrs;
 
-    friend class QgsFGBFeatureIterator;
+    friend class QgsFgbFeatureIterator;
 };
 
 
-class QgsFGBFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFGBFeatureSource>
+class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgbFeatureSource>
 {
   public:
-    QgsFGBFeatureIterator( QgsFGBFeatureSource *source, bool ownSource, const QgsFeatureRequest &request );
-
-    ~QgsFGBFeatureIterator() override;
+    QgsFgbFeatureIterator( QgsFgbFeatureSource *source, bool ownSource, const QgsFeatureRequest &request );
+    ~QgsFgbFeatureIterator() override;
 
     bool rewind() override;
     bool close() override;
 
   protected:
-
     bool fetchFeature( QgsFeature &feature ) override;
 
   private:
+    QFile* mFile;
+    QDataStream* mDataStream;
+    int mC;
 
     bool readFid( QgsFeature &feature );
 

@@ -1,5 +1,5 @@
 /***************************************************************************
-  qgsfgbprovider.h - Data provider for FlatGeobuf files
+  QgsFgbProvider.h - Data provider for FlatGeobuf files
 
  ---------------------
  begin                : October 2018
@@ -14,8 +14,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSFGBPROVIDER_H
-#define QGSFGBPROVIDER_H
+#ifndef QgsFgbProvider_H
+#define QgsFgbProvider_H
 
 #include "qgsvectordataprovider.h"
 #include "qgsfields.h"
@@ -25,24 +25,23 @@ class QgsField;
 class QFile;
 class QDomDocument;
 
-class QgsFGBFeatureIterator;
+class QgsFgbFeatureIterator;
 
 /**
-\class QgsFGBProvider
-\brief Data provider for FGB files
-* This provider adds the ability to load FGB files as vector layers.
+\class QgsFgbProvider
+\brief Data provider for FlatGeobuf files
+* This provider adds the ability to load FlatGeobuf files as vector layers.
 *
 */
-class QgsFGBProvider : public QgsVectorDataProvider
+class QgsFgbProvider : public QgsVectorDataProvider
 {
     Q_OBJECT
 
   public:
-    explicit QgsFGBProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options );
-    ~QgsFGBProvider() override;
+    explicit QgsFgbProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options );
+    ~QgsFgbProvider() override;
 
     /* Functions inherited from QgsVectorDataProvider */
-
     QgsAbstractFeatureSource *featureSource() const override;
     QString storageType() const override;
     QgsFeatureIterator getFeatures( const QgsFeatureRequest &request ) const override;
@@ -51,7 +50,6 @@ class QgsFGBProvider : public QgsVectorDataProvider
     QgsFields fields() const override;
 
     /* Functions inherited from QgsDataProvider */
-
     QgsRectangle extent() const override;
     bool isValid() const override;
     QString name() const override;
@@ -67,7 +65,7 @@ class QgsFGBProvider : public QgsVectorDataProvider
 
     bool mValid = false;
 
-    friend class QgsFGBFeatureSource;
+    friend class QgsFgbFeatureSource;
 };
 
 #endif

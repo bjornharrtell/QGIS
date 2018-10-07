@@ -1,5 +1,5 @@
 /***************************************************************************
-  qgsfgbfeatureiterator.cpp
+  QgsFgbFeatureIterator.cpp
 
  ---------------------
  begin                : October 2018
@@ -13,8 +13,8 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include "qgsfgbfeatureiterator.h"
 
+#include "qgsfgbfeatureiterator.h"
 #include "qgsfgbprovider.h"
 
 #include "qgsapplication.h"
@@ -23,12 +23,14 @@
 #include "qgsmessagelog.h"
 #include "qgsexception.h"
 
+#include "flatgeobuf_generated.h"
+
 #include <limits>
 #include <cstring>
 
 
-QgsFGBFeatureIterator::QgsFGBFeatureIterator( QgsFGBFeatureSource *source, bool ownSource, const QgsFeatureRequest &request )
-  : QgsAbstractFeatureIteratorFromSource<QgsFGBFeatureSource>( source, ownSource, request )
+QgsFgbFeatureIterator::QgsFgbFeatureIterator( QgsFgbFeatureSource *source, bool ownSource, const QgsFeatureRequest &request )
+  : QgsAbstractFeatureIteratorFromSource<QgsFgbFeatureSource>( source, ownSource, request )
 {
   if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
   {
@@ -48,12 +50,12 @@ QgsFGBFeatureIterator::QgsFGBFeatureIterator( QgsFGBFeatureSource *source, bool 
   rewind();
 }
 
-QgsFGBFeatureIterator::~QgsFGBFeatureIterator()
+QgsFgbFeatureIterator::~QgsFgbFeatureIterator()
 {
   close();
 }
 
-bool QgsFGBFeatureIterator::rewind()
+bool QgsFgbFeatureIterator::rewind()
 {
   if ( mClosed )
     return false;
@@ -64,24 +66,29 @@ bool QgsFGBFeatureIterator::rewind()
   }
   else
   {
-    // TODO: reset iterator
+    mFile = nullptr;
   }
 
   return true;
 }
 
-bool QgsFGBFeatureIterator::close()
+bool QgsFgbFeatureIterator::close()
 {
   if ( mClosed )
     return false;
 
   iteratorClosed();
 
+  if (mFile) {
+    mFile->close();
+    delete mFile;
+  }
+
   mClosed = true;
   return true;
 }
 
-bool QgsFGBFeatureIterator::fetchFeature( QgsFeature &feature )
+bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 {
   feature.setValid( false );
 
@@ -97,13 +104,61 @@ bool QgsFGBFeatureIterator::fetchFeature( QgsFeature &feature )
     return res;
   }
 
-  // TODO: impl
+  if ( !mFile )
+  {
+    mC = 0;
+    QgsLogger::debug("FGB: Opening file");
+    mFile = mSource->getFile();
+    if ( !mFile->open( QIODevice::ReadOnly ) )
+    {
+      mFile = nullptr;
+      QgsLogger::warning( QObject::tr( "Couldn't open the data source" ) );
+      return false;
+    }
+    mDataStream = new QDataStream(mFile);
+    mDataStream->skipRawData(60);
+  }
 
-  close();
-  return false;
+  uint32_t featureSize;
+  mDataStream->readRawData((char*) &featureSize, 4);
+  char* featureBuf = new char[featureSize];
+  mDataStream->readRawData(featureBuf, featureSize);
+
+  auto f = flatbuffers::GetRoot<FlatGeobuf::Feature>(featureBuf);
+  auto geometry = f->geometry();
+  auto x = geometry->coords()->Get(0);
+  auto y = geometry->coords()->Get(1);
+
+  delete featureBuf;
+
+  //auto x = ((double) rand() / (RAND_MAX)) + 1;
+  //auto y = ((double) rand() / (RAND_MAX)) + 1;
+  auto p = new QgsPoint(QgsWkbTypes::Point, x, y);
+  //QgsPoint p(QgsWkbTypes::Point, x, y);
+  auto g = new QgsGeometry(p);
+  feature.setGeometry(*g);
+  delete p;
+  delete g;
+
+  mC++;
+
+  //feature.setGeometry(g);
+
+  if ( mDataStream->atEnd() ) {
+  //if ( mC > 1000000 ) {
+    delete mDataStream;
+    QgsLogger::debug("FGB: At end, closing iterator");
+    close();
+    return false;
+  }
+  else
+  {
+    // QgsLogger::debug("FGB: Returning feature");
+    return true;
+  }
 }
 
-bool QgsFGBFeatureIterator::readFid( QgsFeature &feature )
+bool QgsFgbFeatureIterator::readFid( QgsFeature &feature )
 {
   if ( mFetchedFid )
     return false;
@@ -111,14 +166,10 @@ bool QgsFGBFeatureIterator::readFid( QgsFeature &feature )
   mFetchedFid = true;
   QgsFeatureId fid = mRequest.filterFid();
 
-
-
   return false;
 }
 
-// ------------
-
-QgsFGBFeatureSource::QgsFGBFeatureSource( const QgsFGBProvider *p )
+QgsFgbFeatureSource::QgsFgbFeatureSource( const QgsFgbProvider *p )
   : mFileName( p->mFileName )
   , mFields( p->attributeFields )
   , mCrs( p->crs() )
@@ -126,11 +177,16 @@ QgsFGBFeatureSource::QgsFGBFeatureSource( const QgsFGBProvider *p )
 
 }
 
-QgsFGBFeatureSource::~QgsFGBFeatureSource()
+QgsFgbFeatureSource::~QgsFgbFeatureSource()
 {
 }
 
-QgsFeatureIterator QgsFGBFeatureSource::getFeatures( const QgsFeatureRequest &request )
+QFile* QgsFgbFeatureSource::getFile()
 {
-  return QgsFeatureIterator( new QgsFGBFeatureIterator( this, false, request ) );
+  return new QFile(mFileName);
+}
+
+QgsFeatureIterator QgsFgbFeatureSource::getFeatures( const QgsFeatureRequest &request )
+{
+  return QgsFeatureIterator( new QgsFgbFeatureIterator( this, false, request ) );
 }
