@@ -20,6 +20,11 @@
 #include "qgsvectordataprovider.h"
 #include "qgsfields.h"
 
+#include "flatgeobuf_generated.h"
+
+using namespace flatbuffers;
+using namespace FlatGeobuf;
+
 class QgsFeature;
 class QgsField;
 class QFile;
@@ -62,8 +67,14 @@ class QgsFgbProvider : public QgsVectorDataProvider
     QgsFields attributeFields;
 
     QString mFileName;
+    long mFeatureCount;
+    GeometryType mGeometryType;
+    QgsWkbTypes::Type mWkbType;
+    uint32_t mFeatureOffset;
 
     bool mValid = false;
+
+    QgsWkbTypes::Type toWkbType(GeometryType geometryType);
 
     friend class QgsFgbFeatureSource;
 };

@@ -26,6 +26,7 @@
 #include <QFile>
 #include <QTextCodec>
 #include <QTextStream>
+#include <QDataStream>
 #include <QObject>
 
 #include "qgis.h"
@@ -68,13 +69,40 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
     return;
   }
 
+  auto dataStream = new QDataStream(&file);
+  uint32_t headerSize;
+  dataStream->readRawData((char*) &headerSize, 4);
+  char* headerBuf = new char[headerSize];
+  dataStream->readRawData(headerBuf, headerSize);
+
+  auto header = flatbuffers::GetRoot<FlatGeobuf::Header>(headerBuf);
+  mFeatureCount = header->features_count();
+  mGeometryType = header->geometry_type();
+  mWkbType = toWkbType(mGeometryType);
+  mFeatureOffset = headerSize + 4;
+
+  delete headerBuf;
+
   mValid = true;
+}
+
+QgsWkbTypes::Type QgsFgbProvider::toWkbType(GeometryType geometryType) {
+  switch (geometryType)
+  {
+    case GeometryType::Point:
+      return QgsWkbTypes::Point;
+    case GeometryType::LineString:
+      return QgsWkbTypes::LineString;
+    case GeometryType::Polygon:
+      return QgsWkbTypes::Polygon;
+    default:
+      return QgsWkbTypes::Unknown;
+  }
 }
 
 
 QgsFgbProvider::~QgsFgbProvider()
 {
-  // TODO: cleanup
 }
 
 
@@ -103,10 +131,7 @@ QgsRectangle QgsFgbProvider::extent() const
  */
 QgsWkbTypes::Type QgsFgbProvider::wkbType() const
 {
-  // TODO: impl
-  return QgsWkbTypes::Point;
-  // return QgsWkbTypes::LineString;
-  // return QgsWkbTypes::Unknown;
+  return mWkbType;
 }
 
 
@@ -115,8 +140,7 @@ QgsWkbTypes::Type QgsFgbProvider::wkbType() const
  */
 long QgsFgbProvider::featureCount() const
 {
-  // TODO: impl
-  return 0;
+  return mFeatureCount;
 }
 
 
