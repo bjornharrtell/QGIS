@@ -80,6 +80,7 @@ bool QgsFgbFeatureIterator::close()
   iteratorClosed();
 
   if (mFile) {
+    delete mDataStream;
     mFile->close();
     delete mFile;
   }
@@ -106,7 +107,6 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 
   if ( !mFile )
   {
-    mC = 0;
     QgsLogger::debug("FGB: Opening file");
     mFile = mSource->getFile();
     if ( !mFile->open( QIODevice::ReadOnly ) )
@@ -134,28 +134,17 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   //auto x = ((double) rand() / (RAND_MAX)) + 1;
   //auto y = ((double) rand() / (RAND_MAX)) + 1;
   auto p = new QgsPoint(QgsWkbTypes::Point, x, y);
-  //QgsPoint p(QgsWkbTypes::Point, x, y);
-  auto g = new QgsGeometry(p);
-  feature.setGeometry(*g);
-  delete p;
-  delete g;
+  QgsGeometry g(p);
+  feature.setGeometry(g);
 
-  mC++;
-
-  //feature.setGeometry(g);
-
-  if ( mDataStream->atEnd() ) {
-  //if ( mC > 1000000 ) {
-    delete mDataStream;
-    QgsLogger::debug("FGB: At end, closing iterator");
+  if ( mDataStream->atEnd() )
+  {
+    QgsLogger::debug("At end, closing iterator");
     close();
     return false;
   }
-  else
-  {
-    // QgsLogger::debug("FGB: Returning feature");
-    return true;
-  }
+
+  return true;
 }
 
 bool QgsFgbFeatureIterator::readFid( QgsFeature &feature )

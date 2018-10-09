@@ -58,7 +58,7 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
   private:
     QFile* mFile;
     QDataStream* mDataStream;
-    int mC;
+    int mC=0;
 
     bool readFid( QgsFeature &feature );
 
