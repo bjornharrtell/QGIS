@@ -63,13 +63,19 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   mFileName = uri;
 
   QFile file( uri );
-  if ( !file.open( QIODevice::ReadOnly ) )
-  {
+  if ( !file.open( QIODevice::ReadOnly ) ) {
     QgsLogger::warning( QObject::tr( "Couldn't open the data source: %1" ).arg( uri ) );
     return;
   }
 
   auto dataStream = new QDataStream(&file);
+  char magicbytes[4];
+  dataStream->readRawData(magicbytes, 4);
+  if (!(magicbytes[0] == 0x66 && magicbytes[1] == 0x67 && magicbytes[2] == 0x62 && magicbytes[3] == 0x00)) {
+    QgsLogger::warning( QObject::tr( "%1 does not appear to be a FlatGeobuf file" ).arg( uri ) );
+    return;
+  }
+
   uint32_t headerSize;
   dataStream->readRawData((char*) &headerSize, 4);
   char* headerBuf = new char[headerSize];
