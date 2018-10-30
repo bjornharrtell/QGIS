@@ -70,7 +70,6 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
 
     bool mFetchedFid = false;
 
-    uint64_t mFeatureCount;
     uint64_t mFeaturePos = 0;
 
     QgsCoordinateTransform mTransform;

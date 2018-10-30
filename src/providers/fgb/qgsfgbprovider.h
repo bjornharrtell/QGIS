@@ -71,6 +71,7 @@ class QgsFgbProvider : public QgsVectorDataProvider
     GeometryType mGeometryType;
     QgsWkbTypes::Type mWkbType;
     uint32_t mFeatureOffset;
+    std::vector<double> mEnvelope;
 
     bool mValid = false;
 

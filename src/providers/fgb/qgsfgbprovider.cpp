@@ -84,6 +84,7 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   auto header = flatbuffers::GetRoot<FlatGeobuf::Header>(headerBuf);
   mFeatureCount = header->features_count();
   mGeometryType = header->geometry_type();
+  mEnvelope = std::vector<double>(header->envelope()->data(), header->envelope()->data() + 4);
   mWkbType = toWkbType(mGeometryType);
   mFeatureOffset = 4 + headerSize + 4;
 
@@ -127,8 +128,7 @@ QString QgsFgbProvider::storageType() const
 // Return the extent of the layer
 QgsRectangle QgsFgbProvider::extent() const
 {
-  // TODO: impl
-  return QgsRectangle();
+  return QgsRectangle(mEnvelope[0], mEnvelope[1], mEnvelope[2], mEnvelope[3]);
 }
 
 

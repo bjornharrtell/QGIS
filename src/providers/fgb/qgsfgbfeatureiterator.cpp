@@ -35,7 +35,6 @@ using namespace FlatGeobuf;
 
 QgsFgbFeatureIterator::QgsFgbFeatureIterator( QgsFgbFeatureSource *source, bool ownSource, const QgsFeatureRequest &request )
   : QgsAbstractFeatureIteratorFromSource<QgsFgbFeatureSource>( source, ownSource, request )
-  , mFeatureCount(mFeatureCount)
 {
   if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
   {
@@ -62,6 +61,8 @@ QgsFgbFeatureIterator::~QgsFgbFeatureIterator()
 
 bool QgsFgbFeatureIterator::rewind()
 {
+  QgsLogger::debug("FGB: rewind");
+
   if ( mClosed )
     return false;
 
@@ -138,7 +139,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   QgsGeometry qgsGeometry(qgsAbstractGeometry);
   feature.setGeometry(qgsGeometry);
 
-  if ( mFeaturePos >= mFeatureCount || mDataStream->atEnd() ) {
+  if (mFeaturePos >= mSource->mFeatureCount-1 || mDataStream->atEnd() ) {
     QgsLogger::debug("At end, closing iterator");
     close();
     return false;
@@ -158,7 +159,7 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::toQgsAbstractGeometry(const Geometry
   switch (mSource->mGeometryType) {
     case GeometryType::Point:
     {
-      auto point = new QgsPoint(QgsWkbTypes::Point, coords[0], coords[1]);
+      auto point = new QgsPoint(coords[0], coords[1]);
       return point;
     }
     case GeometryType::Polygon:
