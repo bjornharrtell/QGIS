@@ -85,7 +85,7 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   mFeatureCount = header->features_count();
   mGeometryType = header->geometry_type();
   mWkbType = toWkbType(mGeometryType);
-  mFeatureOffset = headerSize + 4;
+  mFeatureOffset = 4 + headerSize + 4;
 
   delete headerBuf;
 

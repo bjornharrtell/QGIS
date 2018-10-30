@@ -35,6 +35,7 @@ using namespace FlatGeobuf;
 
 QgsFgbFeatureIterator::QgsFgbFeatureIterator( QgsFgbFeatureSource *source, bool ownSource, const QgsFeatureRequest &request )
   : QgsAbstractFeatureIteratorFromSource<QgsFgbFeatureSource>( source, ownSource, request )
+  , mFeatureCount(mFeatureCount)
 {
   if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
   {
@@ -71,6 +72,7 @@ bool QgsFgbFeatureIterator::rewind()
   else
   {
     mFile = nullptr;
+    mFeaturePos = 0;
   }
 
   return true;
@@ -83,12 +85,14 @@ bool QgsFgbFeatureIterator::close()
 
   iteratorClosed();
 
-  if (mFile) {
+  if (mFile != nullptr) {
     delete mDataStream;
     mFile->close();
     delete mFile;
+    mFile = nullptr;
   }
 
+  mFeaturePos = 0;
   mClosed = true;
   return true;
 }
@@ -109,7 +113,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     return res;
   }
 
-  if ( !mFile )
+  if (mFile == nullptr)
   {
     QgsLogger::debug("FGB: Opening file");
     mFile = mSource->getFile();
@@ -134,12 +138,13 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   QgsGeometry qgsGeometry(qgsAbstractGeometry);
   feature.setGeometry(qgsGeometry);
 
-  if ( mDataStream->atEnd() )
-  {
+  if ( mFeaturePos >= mFeatureCount || mDataStream->atEnd() ) {
     QgsLogger::debug("At end, closing iterator");
     close();
     return false;
   }
+
+  mFeaturePos++;
 
   return true;
 }
@@ -184,7 +189,7 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::toQgsAbstractGeometry(const Geometry
     }
     default:
     {
-      QgsLogger::warning( "Unknown geometry type");
+      QgsLogger::warning("Unknown geometry type");
       return nullptr;
     }
   }
@@ -204,6 +209,7 @@ bool QgsFgbFeatureIterator::readFid( QgsFeature &feature )
 QgsFgbFeatureSource::QgsFgbFeatureSource( const QgsFgbProvider *p )
   : mFileName( p->mFileName )
   , mFeatureOffset( p->mFeatureOffset )
+  , mFeatureCount( p->mFeatureCount )
   , mWkbType( p->mWkbType )
   , mGeometryType( p->mGeometryType )
   , mFields( p->attributeFields )

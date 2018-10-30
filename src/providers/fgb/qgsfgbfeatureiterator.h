@@ -38,6 +38,7 @@ class QgsFgbFeatureSource : public QgsAbstractFeatureSource
   private:
     QString mFileName;
     uint32_t mFeatureOffset;
+    uint64_t mFeatureCount;
     QgsWkbTypes::Type mWkbType;
     GeometryType mGeometryType;
     QgsFields mFields;
@@ -60,7 +61,7 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
     bool fetchFeature( QgsFeature &feature ) override;
 
   private:
-    QFile* mFile;
+    QFile* mFile = nullptr;
     QDataStream* mDataStream;
     int mC=0;
 
@@ -68,6 +69,9 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
     QgsAbstractGeometry* toQgsAbstractGeometry(const Geometry* geometry);
 
     bool mFetchedFid = false;
+
+    uint64_t mFeatureCount;
+    uint64_t mFeaturePos = 0;
 
     QgsCoordinateTransform mTransform;
     QgsRectangle mFilterRect;

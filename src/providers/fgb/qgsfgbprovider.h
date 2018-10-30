@@ -67,7 +67,7 @@ class QgsFgbProvider : public QgsVectorDataProvider
     QgsFields attributeFields;
 
     QString mFileName;
-    long mFeatureCount;
+    uint64_t mFeatureCount;
     GeometryType mGeometryType;
     QgsWkbTypes::Type mWkbType;
     uint32_t mFeatureOffset;
