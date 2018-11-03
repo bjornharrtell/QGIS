@@ -42,6 +42,8 @@
 #include "qgsfgbfeatureiterator.h"
 #include "qgsfgbprovider.h"
 
+#include "packedhilbertrtree.h"
+
 #ifdef HAVE_GUI
 #include "qgssourceselectprovider.h"
 #include "qgsfgbsourceselect.h"
@@ -71,7 +73,10 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   auto dataStream = new QDataStream(&file);
   char magicbytes[4];
   dataStream->readRawData(magicbytes, 4);
-  if (!(magicbytes[0] == 0x66 && magicbytes[1] == 0x67 && magicbytes[2] == 0x62 && magicbytes[3] == 0x00)) {
+  if (!(magicbytes[0] == 0x66 &&
+        magicbytes[1] == 0x67 &&
+        magicbytes[2] == 0x62 &&
+        magicbytes[3] == 0x00)) {
     QgsLogger::warning( QObject::tr( "%1 does not appear to be a FlatGeobuf file" ).arg( uri ) );
     return;
   }
@@ -86,7 +91,10 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   mGeometryType = header->geometry_type();
   mEnvelope = std::vector<double>(header->envelope()->data(), header->envelope()->data() + 4);
   mWkbType = toWkbType(mGeometryType);
-  mFeatureOffset = 4 + headerSize + 4;
+
+  PackedHilbertRTree<uint64_t> tree(mFeatureCount);
+
+  mFeatureOffset = 4 + headerSize + 4 + tree.size() + mFeatureCount * 8;
 
   delete headerBuf;
 
