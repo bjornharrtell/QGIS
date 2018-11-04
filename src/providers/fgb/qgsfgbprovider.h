@@ -21,6 +21,7 @@
 #include "qgsfields.h"
 
 #include "flatgeobuf_generated.h"
+#include "packedhilbertrtree.h"
 
 using namespace flatbuffers;
 using namespace FlatGeobuf;
@@ -73,11 +74,15 @@ class QgsFgbProvider : public QgsVectorDataProvider
     uint32_t mFeatureOffset;
     std::vector<double> mEnvelope;
 
+    PackedHilbertRTree<uint64_t> *mTree;
+    uint64_t *mFeatureOffsets;
+
     bool mValid = false;
 
     QgsWkbTypes::Type toWkbType(GeometryType geometryType);
 
     friend class QgsFgbFeatureSource;
+    friend class QgsFgbFeatureIterator;
 };
 
 #endif

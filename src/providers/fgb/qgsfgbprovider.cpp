@@ -42,8 +42,6 @@
 #include "qgsfgbfeatureiterator.h"
 #include "qgsfgbprovider.h"
 
-#include "packedhilbertrtree.h"
-
 #ifdef HAVE_GUI
 #include "qgssourceselectprovider.h"
 #include "qgsfgbsourceselect.h"
@@ -61,7 +59,6 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   // we always use UTF-8
   setEncoding( QStringLiteral( "utf8" ) );
 
-  // TODO: parse the file
   mFileName = uri;
 
   QFile file( uri );
@@ -80,22 +77,36 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
     QgsLogger::warning( QObject::tr( "%1 does not appear to be a FlatGeobuf file" ).arg( uri ) );
     return;
   }
+  QgsDebugMsg("Magic bytes verified");
 
   uint32_t headerSize;
   dataStream->readRawData((char*) &headerSize, 4);
+  QgsDebugMsg(QString("Header size is %1").arg(headerSize));
+
   char* headerBuf = new char[headerSize];
   dataStream->readRawData(headerBuf, headerSize);
-
+  QgsDebugMsg("Header read");
   auto header = flatbuffers::GetRoot<FlatGeobuf::Header>(headerBuf);
   mFeatureCount = header->features_count();
   mGeometryType = header->geometry_type();
   mEnvelope = std::vector<double>(header->envelope()->data(), header->envelope()->data() + 4);
   mWkbType = toWkbType(mGeometryType);
+  QgsDebugMsg("Header parsed");
 
   PackedHilbertRTree<uint64_t> tree(mFeatureCount);
+  char *treeBuf = new char[tree.size()];
+  QgsDebugMsg(QString("Index size is %1").arg(tree.size()));
+  dataStream->readRawData(treeBuf, tree.size());
+  mTree = new PackedHilbertRTree<uint64_t>(mFeatureCount, 16, treeBuf);
+  QgsDebugMsg("Index parsed");
+  mFeatureOffsets = new uint64_t[mFeatureCount];
+  dataStream->readRawData((char *) mFeatureOffsets, mFeatureCount * 8);
+  QgsDebugMsg(QString("Feature offsets read (size %1)").arg(mFeatureCount * 8));
 
   mFeatureOffset = 4 + headerSize + 4 + tree.size() + mFeatureCount * 8;
 
+  delete dataStream;
+  file.close();
   delete headerBuf;
 
   mValid = true;

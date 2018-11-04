@@ -6498,7 +6498,10 @@ bool QgisApp::openLayer( const QString &fileName, bool allowInteractive )
     }
     else
     {
-      ok = ok || addVectorLayerPrivate( fileName, fileInfo.completeBaseName(), QStringLiteral( "ogr" ), false );
+      if (fileInfo.completeSuffix() == "fgb")
+        ok = ok || addVectorLayerPrivate( fileName, fileInfo.completeBaseName(), QStringLiteral( "fgb" ), false );
+      else
+        ok = ok || addVectorLayerPrivate( fileName, fileInfo.completeBaseName(), QStringLiteral( "ogr" ), false );
     }
   }
 

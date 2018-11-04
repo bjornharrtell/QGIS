@@ -44,6 +44,8 @@ class QgsFgbFeatureSource : public QgsAbstractFeatureSource
     QgsFields mFields;
     QgsCoordinateReferenceSystem mCrs;
 
+    const QgsFgbProvider *mProvider;
+
     friend class QgsFgbFeatureIterator;
 };
 
@@ -71,6 +73,8 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
     bool mFetchedFid = false;
 
     uint64_t mFeaturePos = 0;
+    uint64_t mIndexPos = 0;
+    std::vector<uint64_t> mIndices;
 
     QgsCoordinateTransform mTransform;
     QgsRectangle mFilterRect;

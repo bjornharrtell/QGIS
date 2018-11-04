@@ -61,7 +61,7 @@ QgsFgbFeatureIterator::~QgsFgbFeatureIterator()
 
 bool QgsFgbFeatureIterator::rewind()
 {
-  QgsLogger::debug("FGB: rewind");
+  QgsDebugMsg("Rewind requested");
 
   if ( mClosed )
     return false;
@@ -94,6 +94,7 @@ bool QgsFgbFeatureIterator::close()
   }
 
   mFeaturePos = 0;
+  mIndexPos = 0;
   mClosed = true;
   return true;
 }
@@ -116,7 +117,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 
   if (mFile == nullptr)
   {
-    QgsLogger::debug("FGB: Opening file");
+    QgsDebugMsg("Opening file due to iteration start");
     mFile = mSource->getFile();
     if ( !mFile->open( QIODevice::ReadOnly ) )
     {
@@ -125,10 +126,28 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
       return false;
     }
     mDataStream = mSource->getDataStream(mFile);
+
+    QgsDebugMsg(QString("Index search for %1").arg(mFilterRect.toString()));
+    mIndices = mSource->mProvider->mTree->search(
+      mFilterRect.xMinimum(),
+      mFilterRect.yMinimum(),
+      mFilterRect.xMaximum(),
+      mFilterRect.yMaximum());
+    QgsDebugMsg(QString("Got %1 indices in tree search").arg(mIndices.size()));
   }
+
+  //QgsDebugMsg(QString("mIndices[mIndexPos] %1 ").arg(mIndices[mIndexPos]));
+  auto featureOffset = mSource->mProvider->mFeatureOffsets[mIndices[mIndexPos]];
+  //QgsDebugMsg(QString("featureOffset %1 ").arg(featureOffset));
+  //QgsDebugMsg(QString("featureOffset 0 %1 ").arg(mSource->mProvider->mFeatureOffsets[0]));
+  //QgsDebugMsg(QString("featureOffset 1 %1 ").arg(mSource->mProvider->mFeatureOffsets[1]));
+  //QgsDebugMsg(QString("mSource->mFeatureOffset %1 ").arg(mSource->mFeatureOffset));
+  //QgsDebugMsg(QString("device pos %1 ").arg(mDataStream->device()->pos()));
+  mDataStream->device()->seek(mSource->mFeatureOffset + featureOffset);
 
   uint32_t featureSize;
   mDataStream->readRawData((char*) &featureSize, 4);
+  //QgsDebugMsg(QString("featureSize %1 ").arg(featureSize));
   char* featureBuf = new char[featureSize];
   mDataStream->readRawData(featureBuf, featureSize);
   auto f = GetRoot<Feature>(featureBuf);
@@ -139,13 +158,19 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   QgsGeometry qgsGeometry(qgsAbstractGeometry);
   feature.setGeometry(qgsGeometry);
 
-  if (mFeaturePos >= mSource->mFeatureCount-1 || mDataStream->atEnd() ) {
+  /*if (mFeaturePos >= mSource->mFeatureCount-1 || mDataStream->atEnd() ) {
     QgsLogger::debug("At end, closing iterator");
     close();
     return false;
   }
 
-  mFeaturePos++;
+  mFeaturePos++;*/
+
+  if (++mIndexPos > mIndices.size() || mDataStream->atEnd() ) {
+    QgsDebugMsg("Closing iterator due to iteration end");
+    close();
+    return false;
+  }
 
   return true;
 }
@@ -215,6 +240,7 @@ QgsFgbFeatureSource::QgsFgbFeatureSource( const QgsFgbProvider *p )
   , mGeometryType( p->mGeometryType )
   , mFields( p->attributeFields )
   , mCrs( p->crs() )
+  , mProvider (p)
 {
 
 }
