@@ -33,18 +33,17 @@
 using namespace flatbuffers;
 using namespace FlatGeobuf;
 
-QgsFgbFeatureIterator::QgsFgbFeatureIterator( QgsFgbFeatureSource *source, bool ownSource, const QgsFeatureRequest &request )
-  : QgsAbstractFeatureIteratorFromSource<QgsFgbFeatureSource>( source, ownSource, request )
+QgsFgbFeatureIterator::QgsFgbFeatureIterator(QgsFgbFeatureSource *source, bool ownSource, const QgsFeatureRequest &request)
+  : QgsAbstractFeatureIteratorFromSource<QgsFgbFeatureSource>(source, ownSource, request)
 {
-  if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
-  {
-    mTransform = QgsCoordinateTransform( mSource->mCrs, mRequest.destinationCrs(), mRequest.transformContext() );
-  }
+  if (mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs)
+    mTransform = QgsCoordinateTransform( mSource->mCrs, mRequest.destinationCrs(), mRequest.transformContext());
+
   try
   {
     mFilterRect = filterRectToSourceCrs( mTransform );
   }
-  catch ( QgsCsException & )
+  catch (QgsCsException &)
   {
     // can't reproject mFilterRect
     close();
@@ -56,6 +55,7 @@ QgsFgbFeatureIterator::QgsFgbFeatureIterator( QgsFgbFeatureSource *source, bool 
 
 QgsFgbFeatureIterator::~QgsFgbFeatureIterator()
 {
+  QgsDebugMsg("QgsFgbFeatureIterator destruction");
   close();
 }
 
@@ -63,25 +63,23 @@ bool QgsFgbFeatureIterator::rewind()
 {
   QgsDebugMsg("Rewind requested");
 
-  if ( mClosed )
+  if (mClosed)
     return false;
 
-  if ( mRequest.filterType() == QgsFeatureRequest::FilterFid )
-  {
+  if (mRequest.filterType() == QgsFeatureRequest::FilterFid)
     mFetchedFid = false;
-  }
-  else
-  {
-    mFile = nullptr;
-    mFeaturePos = 0;
-  }
+  else if (mFile != nullptr)
+    mDataStream->device()->seek(mSource->mFeatureOffset);
+
+  mFeaturePos = 0;
+  mIndexPos = 0;
 
   return true;
 }
 
 bool QgsFgbFeatureIterator::close()
 {
-  if ( mClosed )
+  if (mClosed)
     return false;
 
   iteratorClosed();
@@ -103,30 +101,29 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 {
   feature.setValid( false );
 
-  if ( mClosed )
+  if (mClosed)
     return false;
 
-  if ( mRequest.filterType() == QgsFeatureRequest::FilterFid )
-  {
+  if (mRequest.filterType() == QgsFeatureRequest::FilterFid) {
     bool res = readFid( feature );
     close();
-    if ( res )
+    if (res)
       geometryToDestinationCrs( feature, mTransform );
     return res;
   }
 
-  if (mFile == nullptr)
-  {
+  if (mFile == nullptr) {
     QgsDebugMsg("Opening file due to iteration start");
     mFile = mSource->getFile();
-    if ( !mFile->open( QIODevice::ReadOnly ) )
-    {
+    if ( !mFile->open( QIODevice::ReadOnly ) ) {
       mFile = nullptr;
       QgsLogger::warning( QObject::tr( "Couldn't open the data source" ) );
       return false;
     }
     mDataStream = mSource->getDataStream(mFile);
+  }
 
+  if (mIndexPos == 0) {
     QgsDebugMsg(QString("Index search for %1").arg(mFilterRect.toString()));
     mIndices = mSource->mProvider->mTree->search(
       mFilterRect.xMinimum(),
@@ -134,6 +131,8 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
       mFilterRect.xMaximum(),
       mFilterRect.yMaximum());
     QgsDebugMsg(QString("Got %1 indices in tree search").arg(mIndices.size()));
+    if (mIndices.size() == 0)
+      return false;
   }
 
   //QgsDebugMsg(QString("mIndices[mIndexPos] %1 ").arg(mIndices[mIndexPos]));
@@ -143,12 +142,17 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   //QgsDebugMsg(QString("featureOffset 1 %1 ").arg(mSource->mProvider->mFeatureOffsets[1]));
   //QgsDebugMsg(QString("mSource->mFeatureOffset %1 ").arg(mSource->mFeatureOffset));
   //QgsDebugMsg(QString("device pos %1 ").arg(mDataStream->device()->pos()));
-  mDataStream->device()->seek(mSource->mFeatureOffset + featureOffset);
+  auto res = mDataStream->device()->seek(mSource->mFeatureOffset + featureOffset);
+
+  if (!res) {
+    QgsDebugMsg(QString("Unexpected seek failure (offset %1)").arg(mSource->mFeatureOffset + featureOffset));
+    return false;
+  }
 
   uint32_t featureSize;
   mDataStream->readRawData((char*) &featureSize, 4);
   //QgsDebugMsg(QString("featureSize %1 ").arg(featureSize));
-  char* featureBuf = new char[featureSize];
+  char *featureBuf = new char[featureSize];
   mDataStream->readRawData(featureBuf, featureSize);
   auto f = GetRoot<Feature>(featureBuf);
   auto geometry = f->geometry();
@@ -166,11 +170,11 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 
   mFeaturePos++;*/
 
-  if (++mIndexPos > mIndices.size() || mDataStream->atEnd() ) {
-    QgsDebugMsg("Closing iterator due to iteration end");
-    close();
+  if (++mIndexPos >= mIndices.size() || mDataStream->atEnd()) {
+    QgsDebugMsg(QString("Iteration end at mIndexPos %1").arg(mIndexPos));
     return false;
   }
+
 
   return true;
 }
@@ -182,13 +186,11 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::toQgsAbstractGeometry(const Geometry
   //auto lengths = geometry->lengths();
   //auto lengthsLength = lengths->Length();
   switch (mSource->mGeometryType) {
-    case GeometryType::Point:
-    {
+    case GeometryType::Point: {
       auto point = new QgsPoint(coords[0], coords[1]);
       return point;
     }
-    case GeometryType::Polygon:
-    {
+    case GeometryType::Polygon: {
       auto ringLengths = geometry->ring_lengths();
       if (ringLengths != nullptr) {
         auto ringLengthsLength = ringLengths->Length();
@@ -213,8 +215,7 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::toQgsAbstractGeometry(const Geometry
       polygon->setExteriorRing(exteriorRing);
       return polygon;
     }
-    default:
-    {
+    default: {
       QgsLogger::warning("Unknown geometry type");
       return nullptr;
     }
@@ -223,7 +224,7 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::toQgsAbstractGeometry(const Geometry
 
 bool QgsFgbFeatureIterator::readFid( QgsFeature &feature )
 {
-  if ( mFetchedFid )
+  if (mFetchedFid)
     return false;
 
   mFetchedFid = true;
@@ -263,5 +264,5 @@ QDataStream* QgsFgbFeatureSource::getDataStream(QFile* file)
 
 QgsFeatureIterator QgsFgbFeatureSource::getFeatures( const QgsFeatureRequest &request )
 {
-  return QgsFeatureIterator( new QgsFgbFeatureIterator( this, false, request ) );
+  return QgsFeatureIterator(new QgsFgbFeatureIterator(this, false, request));
 }
