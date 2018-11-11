@@ -139,7 +139,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 
   //QgsDebugMsg(QString("mIndices[mIndexPos] %1 ").arg(mIndices[mIndexPos]));
   //auto featureOffset = mSource->mProvider->mFeatureOffsets[i];
-  auto featureOffset = mSource->mProvider->mFeatureOffsets[mSource->mProvider->mTree->getIndex(i)];
+  auto featureOffset = mSource->mProvider->mFeatureOffsets[i];
   //QgsDebugMsg(QString("featureOffset %1 ").arg(featureOffset));
   //QgsDebugMsg(QString("featureOffset 0 %1 ").arg(mSource->mProvider->mFeatureOffsets[0]));
   //QgsDebugMsg(QString("featureOffset 1 %1 ").arg(mSource->mProvider->mFeatureOffsets[1]));
@@ -156,9 +156,9 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   mDataStream->readRawData((char*) &featureSize, 4);
   char *featureBuf = new char[featureSize];
   mDataStream->readRawData(featureBuf, featureSize);
-  const uint8_t * vBuf = const_cast<const uint8_t *>(reinterpret_cast<uint8_t *>(featureBuf));
 
   // TODO: only on debug build
+  /*const uint8_t *vBuf = const_cast<const uint8_t *>(reinterpret_cast<uint8_t *>(featureBuf));
   Verifier v(vBuf, featureSize);
   auto ok = VerifyFeatureBuffer(v);
   if (!ok) {
@@ -168,26 +168,34 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     QgsDebugMsg(QString("featureSize: %1").arg(featureSize));
     close();
     return false;
-  }
+  }*/
 
   auto f = GetRoot<Feature>(featureBuf);
   auto geometry = f->geometry();
   auto qgsAbstractGeometry = toQgsAbstractGeometry(geometry);
-  delete featureBuf;
+  feature.setId(f->fid());
 
+  delete featureBuf;
   QgsGeometry qgsGeometry(qgsAbstractGeometry);
   feature.setGeometry(qgsGeometry);
 
+  // TODO: only on debug build
+  /*
   Rect rect {
     mFilterRect.xMinimum(),
     mFilterRect.yMinimum(),
     mFilterRect.xMaximum(),
     mFilterRect.yMaximum()
   };
-
-  // TODO: only on debug build
-  if (!rect.intersects(mSource->mProvider->mTree->getRect(mSource->mProvider->mTree->getIndex(i)))) {
-    QgsDebugMsg(QString("!mFilterRect.intersects getRects"));
+  auto fRect = mSource->mProvider->mTree->getRect(mSource->mProvider->mTree->getIndex(i));
+  if (!rect.intersects(fRect)) {
+    QgsDebugMsg(QString("Filter rect does not intersect feature rect"));
+    QgsRectangle r(fRect.minX, fRect.minY, fRect.maxX, fRect.maxY);
+    QgsDebugMsg(QString("mFilterRect rect: %1").arg(mFilterRect.toString()));
+    QgsDebugMsg(QString("Index rect: %1").arg(r.toString()));
+    QgsDebugMsg(QString("Index rect: %1,%2 : %3,%4").arg(fRect.minX, 0, 'f').arg(fRect.minY, 0, 'f').arg(fRect.maxX, 0, 'f').arg(fRect.maxY, 0, 'f'));
+    QgsDebugMsg(QString("Feature rect: %1").arg(qgsGeometry.boundingBox().toString()));
+    QgsDebugMsg(QString("Feature geom: %1").arg(qgsGeometry.asPoint().toString()));
     QgsDebugMsg(QString("featureOffset: %1").arg(featureOffset));
     QgsDebugMsg(QString("mIndexPos: %1").arg(mIndexPos));
     QgsDebugMsg(QString("i: %1").arg(i));
@@ -195,6 +203,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     close();
     return false;
   }
+
   // TODO: only on debug build
   if (!mFilterRect.intersects(qgsGeometry.boundingBox())) {
     QgsDebugMsg(QString("!mFilterRect.intersects"));
@@ -204,6 +213,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     close();
     return false;
   }
+  */
 
   /*if (mFeaturePos >= mSource->mFeatureCount-1 || mDataStream->atEnd() ) {
     QgsLogger::debug("At end, closing iterator");

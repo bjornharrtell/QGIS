@@ -41,6 +41,10 @@ struct Rect {
     }
 };
 
+/**
+ * Packed Hilbert R-Tree
+ * Based on https://github.com/mourner/flatbush
+ */
 template <class T>
 class PackedHilbertRTree {
     Rect _extent;
@@ -124,7 +128,9 @@ class PackedHilbertRTree {
         i1 = (i1 | (i1 << 2)) & 0x33333333;
         i1 = (i1 | (i1 << 1)) & 0x55555555;
 
-        return ((i1 << 1) | i0);
+        auto value = ((i1 << 1) | i0);
+
+        return value;
     }
 public:
     PackedHilbertRTree(const T numItems, const uint16_t nodeSize = 16, const void *data = nullptr) {
@@ -139,7 +145,7 @@ public:
 
         T n = numItems;
         T numNodes = n;
-        _levelBounds = std::vector<T> { n };
+        _levelBounds.push_back(n);
         do {
             n = ceil(static_cast<double>(n) / _nodeSize);
             numNodes += n;
@@ -152,10 +158,10 @@ public:
         _indices.reserve(_numNodes);
 
         if (data != nullptr) {
-            auto buf = reinterpret_cast<const uint8_t*>(data);
+            auto buf = reinterpret_cast<const uint8_t *>(data);
             uint64_t rectsSize = _numNodes * sizeof(Rect);
-            const Rect* pr = reinterpret_cast<const Rect*>(buf);
-            const T* pi = reinterpret_cast<const T*>(buf + rectsSize);
+            const Rect *pr = reinterpret_cast<const Rect*>(buf);
+            const T *pi = reinterpret_cast<const T*>(buf + rectsSize);
             for (T i = 0; i < _numNodes; i++) {
                 add(*pr++);
                 _indices[i] = *pi++;
@@ -189,12 +195,14 @@ public:
         T hilbertMax = (1 << 16) - 1;
 
         // map item centers into Hilbert coordinate space and calculate Hilbert values
-        std::vector<T> hilbertValues(_numItems);
+        std::vector<T> hilbertValues;
+        hilbertValues.reserve(_numItems);
         for (T i = 0; i < _numItems; i++) {
             auto r = _rects[i];
             T x = floor(hilbertMax * ((r.minX + r.maxX) / 2 - _extent.minX) / _extent.width());
             T y = floor(hilbertMax * ((r.minY + r.maxY) / 2 - _extent.minY) / _extent.height());
-            hilbertValues.push_back(hilbert(x, y));
+            auto v = hilbert(x, y);
+            hilbertValues.push_back(v);
         }
 
         // sort items by their Hilbert value (for packing later)
@@ -260,7 +268,7 @@ public:
     }
     uint64_t numNodes() const { return _numNodes; }
     uint64_t size() const { return _numNodes * sizeof(Rect) + _numNodes * sizeof(T); }
-    uint8_t* toData() const {
+    uint8_t *toData() const {
         T rectsSize = _numNodes * sizeof(Rect);
         T indicesSize = _numNodes * sizeof(T);
         uint8_t *data = new uint8_t[rectsSize + indicesSize];
@@ -272,6 +280,7 @@ public:
         }
         return data;
     }
+
     Rect getExtent() const { return _extent; }
     Rect getRect(T i) const { return _rects[i]; }
     T getIndex(T i) const { return _indices[i]; }
