@@ -227,7 +227,6 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     close();
     return false;
   }
-
   return true;
 }
 

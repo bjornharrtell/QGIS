@@ -55,7 +55,7 @@ class PackedHilbertRTree {
     T _numNodes;
     uint16_t _nodeSize;
     std::vector<T> _levelBounds;
-    static void sort(std::vector<T> &values, std::vector<Rect> &boxes, std::vector<T> &indices, T left, T right) {
+    static void sort(T *values, Rect *boxes, T *indices, T left, T right) {
         if (left >= right) return;
 
         T pivot = values[(left + right) >> 1];
@@ -66,24 +66,13 @@ class PackedHilbertRTree {
             do i++; while (values[i] < pivot);
             do j--; while (values[j] > pivot);
             if (i >= j) break;
-            swap(values, boxes, indices, i, j);
+            std::swap(values[i], values[j]);
+		    std::swap(boxes[i], boxes[j]);
+            std::swap(indices[i], indices[j]);
         }
 
         sort(values, boxes, indices, left, j);
         sort(values, boxes, indices, j + 1, right);
-    }
-    static void swap(std::vector<T> &values, std::vector<Rect> &boxes, std::vector<T> &indices, T i, T j) {
-        T temp = values[i];
-        values[i] = values[j];
-        values[j] = temp;
-
-        auto r = boxes[i];
-        boxes[i] = boxes[j];
-        boxes[j] = r;
-
-        T e = indices[i];
-        indices[i] = indices[j];
-        indices[j] = e;
     }
     static T hilbert(T x, T y) {
         T a = x ^ y;
@@ -206,7 +195,7 @@ public:
         }
 
         // sort items by their Hilbert value (for packing later)
-        sort(hilbertValues, _rects, _indices, 0, _numItems - 1);
+        sort(hilbertValues.data(), _rects.data(), _indices.data(), 0, _numItems - 1);
 
         // generate nodes at each tree level, bottom-up
         for (T i = 0, pos = 0; i < _levelBounds.size() - 1; i++) {
@@ -228,13 +217,18 @@ public:
 
         Rect r { minX, minY, maxX, maxY };
 
-        T nodeIndex = _rects.size() - 1;
-        T level = _levelBounds.size() - 1;
-        std::stack<T> stack;
+        std::vector<T> queue;
         std::vector<T> results;
 
-        //bool cont = true;
-        while(true) {
+        queue.push_back(_rects.size() - 1);
+	    queue.push_back(_levelBounds.size() - 1);
+
+        while(queue.size() != 0) {
+            T nodeIndex = queue[queue.size() - 2];
+            T level = queue[queue.size() - 1];
+            queue.pop_back();
+            queue.pop_back();
+
             // find the end index of the node
             T end = std::min(static_cast<T>(nodeIndex + _nodeSize), _levelBounds[level]);
 
@@ -249,19 +243,10 @@ public:
                 if (nodeIndex < _numItems) {
                     results.push_back(index); // leaf item
                 } else {
-                    stack.push(index); // node; add it to the search queue
-                    stack.push(level - 1);
+                    queue.push_back(index); // node; add it to the search queue
+                    queue.push_back(level - 1);
                 }
             }
-
-            if (stack.size() == 0)
-                break;
-            level = stack.top();
-            stack.pop();
-            nodeIndex = stack.top();
-            stack.pop();
-            //if (stack.size() == 0)
-            //    cont = false;
         }
 
         return results;
@@ -280,7 +265,6 @@ public:
         }
         return data;
     }
-
     Rect getExtent() const { return _extent; }
     Rect getRect(T i) const { return _rects[i]; }
     T getIndex(T i) const { return _indices[i]; }
