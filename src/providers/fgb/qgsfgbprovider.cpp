@@ -107,7 +107,7 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
 
   delete dataStream;
   file.close();
-  delete headerBuf;
+  delete[] headerBuf;
 
   mValid = true;
 }

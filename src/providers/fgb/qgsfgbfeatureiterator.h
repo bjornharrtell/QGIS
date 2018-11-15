@@ -38,8 +38,6 @@ class QgsFgbFeatureSource : public QgsAbstractFeatureSource
   private:
     QString mFileName;
     uint32_t mFeatureOffset;
-    uint64_t mFeatureCount;
-    QgsWkbTypes::Type mWkbType;
     GeometryType mGeometryType;
     QgsFields mFields;
     QgsCoordinateReferenceSystem mCrs;
@@ -65,7 +63,6 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
   private:
     QFile* mFile = nullptr;
     QDataStream* mDataStream;
-    int mC=0;
 
     bool readFid( QgsFeature &feature );
     QgsAbstractGeometry* toQgsAbstractGeometry(const Geometry* geometry);

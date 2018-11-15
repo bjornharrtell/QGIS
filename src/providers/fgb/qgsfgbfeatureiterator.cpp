@@ -137,6 +137,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 
   auto i = mIndices[mIndexPos];
 
+
   //QgsDebugMsg(QString("mIndices[mIndexPos] %1 ").arg(mIndices[mIndexPos]));
   //auto featureOffset = mSource->mProvider->mFeatureOffsets[i];
   auto featureOffset = mSource->mProvider->mFeatureOffsets[i];
@@ -175,7 +176,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   auto qgsAbstractGeometry = toQgsAbstractGeometry(geometry);
   feature.setId(f->fid());
 
-  delete featureBuf;
+  delete[] featureBuf;
   QgsGeometry qgsGeometry(qgsAbstractGeometry);
   feature.setGeometry(qgsGeometry);
 
@@ -222,6 +223,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   }
   mFeaturePos++;*/
 
+  // NOTE: not sure about this... !!
   if (++mIndexPos >= mIndices.size()) {
     QgsDebugMsg(QString("Iteration end at mIndexPos %1").arg(mIndexPos));
     close();
@@ -287,8 +289,6 @@ bool QgsFgbFeatureIterator::readFid( QgsFeature &feature )
 QgsFgbFeatureSource::QgsFgbFeatureSource( const QgsFgbProvider *p )
   : mFileName( p->mFileName )
   , mFeatureOffset( p->mFeatureOffset )
-  , mFeatureCount( p->mFeatureCount )
-  , mWkbType( p->mWkbType )
   , mGeometryType( p->mGeometryType )
   , mFields( p->attributeFields )
   , mCrs( p->crs() )
