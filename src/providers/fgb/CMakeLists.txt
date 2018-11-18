@@ -7,10 +7,12 @@ ADD_SUBDIRECTORY(flatbuffers)
 SET (FGB_SRCS
   qgsfgbfeatureiterator.cpp
   qgsfgbprovider.cpp
+  packedrtree.cpp
 )
 
 SET (FGB_MOC_HDRS
   flatgeobuf_generated.h
+  packedrtree.cpp
   qgsfgbprovider.h
 )
 

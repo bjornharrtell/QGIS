@@ -133,10 +133,13 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     QgsDebugMsg(QString("Got %1 indices in tree search").arg(mIndices.size()));
     if (mIndices.size() == 0)
       return false;
+  } else if (mIndexPos >= mIndices.size()) {
+    QgsDebugMsg(QString("Iteration end at mIndexPos %1").arg(mIndexPos));
+    close();
+    return false;
   }
 
   auto i = mIndices[mIndexPos];
-
 
   //QgsDebugMsg(QString("mIndices[mIndexPos] %1 ").arg(mIndices[mIndexPos]));
   //auto featureOffset = mSource->mProvider->mFeatureOffsets[i];
@@ -223,12 +226,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   }
   mFeaturePos++;*/
 
-  // NOTE: not sure about this... !!
-  if (++mIndexPos >= mIndices.size()) {
-    QgsDebugMsg(QString("Iteration end at mIndexPos %1").arg(mIndexPos));
-    close();
-    return false;
-  }
+  mIndexPos++;
   return true;
 }
 

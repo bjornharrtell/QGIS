@@ -93,17 +93,17 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   mWkbType = toWkbType(mGeometryType);
   QgsDebugMsg("Header parsed");
 
-  PackedHilbertRTree<uint64_t> tree(mFeatureCount);
-  char *treeBuf = new char[tree.size()];
-  QgsDebugMsg(QString("Index size is %1").arg(tree.size()));
-  dataStream->readRawData(treeBuf, tree.size());
-  mTree = new PackedHilbertRTree<uint64_t>(mFeatureCount, 16, treeBuf);
+  uint64_t treeSize = PackedRTree::size(mFeatureCount);
+  char *treeBuf = new char[treeSize];
+  QgsDebugMsg(QString("Index size is %1").arg(treeSize));
+  dataStream->readRawData(treeBuf, treeSize);
+  mTree = new PackedRTree(treeBuf, mFeatureCount);
   QgsDebugMsg("Index parsed");
   mFeatureOffsets = new uint64_t[mFeatureCount];
   dataStream->readRawData((char *) mFeatureOffsets, mFeatureCount * 8);
   QgsDebugMsg(QString("Feature offsets read (size %1)").arg(mFeatureCount * 8));
 
-  mFeatureOffset = 4 + headerSize + 4 + tree.size() + mFeatureCount * 8;
+  mFeatureOffset = 4 + headerSize + 4 + treeSize + mFeatureCount * 8;
 
   delete dataStream;
   file.close();
