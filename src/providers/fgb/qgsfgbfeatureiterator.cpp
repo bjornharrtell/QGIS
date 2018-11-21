@@ -243,27 +243,53 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::toQgsAbstractGeometry(const Geometry
     }
     case GeometryType::Polygon: {
       auto ringLengths = geometry->ring_lengths();
+      QVector<QgsCurve *> rings;
+
       if (ringLengths != nullptr) {
-        auto ringLengthsLength = ringLengths->Length();
-        if (ringLengthsLength > 0)
-          coordsLength = ringLengths->Get(0);
+        size_t offset = 0;
+        for (size_t i = 0; i < ringLengths->size(); i++) {
+          auto dimLength = ringLengths->Get(i) / 2;
+          auto x = QVector<double>(dimLength);
+          auto xd = x.data();
+          auto y = QVector<double>(dimLength);
+          auto yd = y.data();
+          auto z = QVector<double>();
+          auto m = QVector<double>();
+          unsigned int c = 0;
+          for (std::vector<double>::size_type i = 0; i < coordsLength; i = i + 2) {
+            xd[c] = coords[i];
+            yd[c] = coords[i+1];
+            c++;
+          }
+          auto ring = new QgsLineString(x, y, z, m, false);
+          rings.append(ring);
+          offset += ringLengths->Get(i);
+        }
+      } else {
+        // TODO: copy&paste from above, make reusable
+        auto dimLength = coordsLength / 2;
+        auto x = QVector<double>(dimLength);
+        auto xd = x.data();
+        auto y = QVector<double>(dimLength);
+        auto yd = y.data();
+        auto z = QVector<double>();
+        auto m = QVector<double>();
+        unsigned int c = 0;
+        for (std::vector<double>::size_type i = 0; i < coordsLength; i = i + 2) {
+          xd[c] = coords[i];
+          yd[c] = coords[i+1];
+          c++;
+        }
+        auto ring = new QgsLineString(x, y, z, m, false);
+        rings.append(ring);
       }
-      auto dimLength = coordsLength / 2;
-      auto x = QVector<double>(dimLength);
-      auto xd = x.data();
-      auto y = QVector<double>(dimLength);
-      auto yd = y.data();
-      auto z = QVector<double>();
-      auto m = QVector<double>();
-      unsigned int c = 0;
-      for (std::vector<double>::size_type i = 0; i < coordsLength; i = i + 2) {
-        xd[c] = coords[i];
-        yd[c] = coords[i+1];
-        c++;
-      }
-      auto exteriorRing = new QgsLineString(x, y, z, m, false);
+
       auto polygon = new QgsPolygon();
-      polygon->setExteriorRing(exteriorRing);
+      polygon->setExteriorRing(rings.at(0));
+      if (rings.size() > 1) {
+        const QVector<QgsCurve *> interiorRings = rings.mid(1);
+        polygon->setInteriorRings(interiorRings);
+      }
       return polygon;
     }
     default: {
