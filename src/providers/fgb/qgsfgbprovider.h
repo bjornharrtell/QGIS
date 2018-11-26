@@ -70,6 +70,7 @@ class QgsFgbProvider : public QgsVectorDataProvider
     QString mFileName;
     uint64_t mFeatureCount;
     GeometryType mGeometryType;
+    uint8_t mDimensions;
     QgsWkbTypes::Type mWkbType;
     uint32_t mFeatureOffset;
     std::vector<double> mEnvelope;

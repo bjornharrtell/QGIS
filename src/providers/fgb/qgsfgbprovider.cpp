@@ -89,6 +89,7 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   auto header = flatbuffers::GetRoot<FlatGeobuf::Header>(headerBuf);
   mFeatureCount = header->features_count();
   mGeometryType = header->geometry_type();
+  mDimensions = header->dimensions();
   mEnvelope = std::vector<double>(header->envelope()->data(), header->envelope()->data() + 4);
   mWkbType = toWkbType(mGeometryType);
   QgsDebugMsg("Header parsed");

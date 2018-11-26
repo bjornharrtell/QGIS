@@ -176,7 +176,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
 
   auto f = GetRoot<Feature>(featureBuf);
   auto geometry = f->geometry();
-  auto qgsAbstractGeometry = toQgsAbstractGeometry(geometry);
+  auto qgsAbstractGeometry = readGeometry(geometry, mSource->mDimensions);
   feature.setId(f->fid());
 
   delete[] featureBuf;
@@ -230,68 +230,64 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   return true;
 }
 
-QgsAbstractGeometry* QgsFgbFeatureIterator::toQgsAbstractGeometry(const Geometry* geometry)
+QgsLineString *QgsFgbFeatureIterator::readLineString(const double *coords, uint32_t coordsLength, uint8_t dimensions, uint32_t offset)
+{
+  auto dimLength = coordsLength / dimensions;
+  auto x = QVector<double>(dimLength);
+  auto xd = x.data();
+  auto y = QVector<double>(dimLength);
+  auto yd = y.data();
+  auto z = QVector<double>();
+  auto m = QVector<double>();
+  unsigned int c = 0;
+  for (std::vector<double>::size_type i = offset; i < offset + coordsLength; i = i + 2) {
+    xd[c] = coords[i];
+    yd[c] = coords[i+1];
+    c++;
+  }
+  auto qgsLineString = new QgsLineString(x, y, z, m, false);
+  return qgsLineString;
+}
+
+QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *coords, uint32_t coordsLength, const Vector<uint32_t> *ringLengths, uint8_t dimensions)
+{
+  QVector<QgsCurve *> rings;
+
+  if (ringLengths != nullptr) {
+    size_t offset = 0;
+    for (size_t i = 0; i < ringLengths->size(); i++) {
+      auto ringLength = ringLengths->Get(i);
+      auto ring = readLineString(coords, ringLength, dimensions, offset);
+      rings.append(ring);
+      offset += ringLength;
+    }
+  } else {
+    auto ring = readLineString(coords, coordsLength, dimensions);
+    rings.append(ring);
+  }
+
+  auto polygon = new QgsPolygon();
+  polygon->setExteriorRing(rings.at(0));
+  if (rings.size() > 1) {
+    const QVector<QgsCurve *> interiorRings = rings.mid(1);
+    polygon->setInteriorRings(interiorRings);
+  }
+  return polygon;
+}
+
+QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Geometry* geometry, uint8_t dimensions)
 {
   auto coords = geometry->coords()->data();
   auto coordsLength = geometry->coords()->Length();
   //auto lengths = geometry->lengths();
   //auto lengthsLength = lengths->Length();
   switch (mSource->mGeometryType) {
-    case GeometryType::Point: {
-      auto point = new QgsPoint(coords[0], coords[1]);
-      return point;
-    }
-    case GeometryType::Polygon: {
-      auto ringLengths = geometry->ring_lengths();
-      QVector<QgsCurve *> rings;
-
-      if (ringLengths != nullptr) {
-        size_t offset = 0;
-        for (size_t i = 0; i < ringLengths->size(); i++) {
-          auto dimLength = ringLengths->Get(i) / 2;
-          auto x = QVector<double>(dimLength);
-          auto xd = x.data();
-          auto y = QVector<double>(dimLength);
-          auto yd = y.data();
-          auto z = QVector<double>();
-          auto m = QVector<double>();
-          unsigned int c = 0;
-          for (std::vector<double>::size_type i = 0; i < coordsLength; i = i + 2) {
-            xd[c] = coords[i];
-            yd[c] = coords[i+1];
-            c++;
-          }
-          auto ring = new QgsLineString(x, y, z, m, false);
-          rings.append(ring);
-          offset += ringLengths->Get(i);
-        }
-      } else {
-        // TODO: copy&paste from above, make reusable
-        auto dimLength = coordsLength / 2;
-        auto x = QVector<double>(dimLength);
-        auto xd = x.data();
-        auto y = QVector<double>(dimLength);
-        auto yd = y.data();
-        auto z = QVector<double>();
-        auto m = QVector<double>();
-        unsigned int c = 0;
-        for (std::vector<double>::size_type i = 0; i < coordsLength; i = i + 2) {
-          xd[c] = coords[i];
-          yd[c] = coords[i+1];
-          c++;
-        }
-        auto ring = new QgsLineString(x, y, z, m, false);
-        rings.append(ring);
-      }
-
-      auto polygon = new QgsPolygon();
-      polygon->setExteriorRing(rings.at(0));
-      if (rings.size() > 1) {
-        const QVector<QgsCurve *> interiorRings = rings.mid(1);
-        polygon->setInteriorRings(interiorRings);
-      }
-      return polygon;
-    }
+    case GeometryType::Point:
+      return new QgsPoint(coords[0], coords[1]);
+    case GeometryType::LineString:
+      return readLineString(coords, coordsLength, dimensions);
+    case GeometryType::Polygon:
+      return readPolygon(coords, coordsLength, geometry->ring_lengths(), dimensions);
     default: {
       QgsLogger::warning("Unknown geometry type");
       return nullptr;
@@ -314,11 +310,11 @@ QgsFgbFeatureSource::QgsFgbFeatureSource( const QgsFgbProvider *p )
   : mFileName( p->mFileName )
   , mFeatureOffset( p->mFeatureOffset )
   , mGeometryType( p->mGeometryType )
+  , mDimensions( p->mDimensions )
   , mFields( p->attributeFields )
   , mCrs( p->crs() )
   , mProvider (p)
 {
-
 }
 
 QgsFgbFeatureSource::~QgsFgbFeatureSource()

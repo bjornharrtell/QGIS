@@ -39,6 +39,7 @@ class QgsFgbFeatureSource : public QgsAbstractFeatureSource
     QString mFileName;
     uint32_t mFeatureOffset;
     GeometryType mGeometryType;
+    uint8_t mDimensions;
     QgsFields mFields;
     QgsCoordinateReferenceSystem mCrs;
 
@@ -65,7 +66,9 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
     QDataStream* mDataStream;
 
     bool readFid( QgsFeature &feature );
-    QgsAbstractGeometry* toQgsAbstractGeometry(const Geometry* geometry);
+    QgsLineString *readLineString(const double *coords, uint32_t coordsLength, uint8_t dimensions, uint32_t offset = 0);
+    QgsPolygon *readPolygon(const double *coords, uint32_t coordsLength, const Vector<uint32_t> *ringLengths, uint8_t dimensions);
+    QgsAbstractGeometry* readGeometry(const Geometry* geometry, uint8_t dimensions);
 
     bool mFetchedFid = false;
 
