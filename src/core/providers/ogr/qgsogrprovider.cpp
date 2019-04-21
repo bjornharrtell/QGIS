@@ -3111,6 +3111,11 @@ QString createFilters( const QString &type )
         sFileFilters += createFileFilter_( QObject::tr( "OpenStreetMap" ), QStringLiteral( "*.osm *.pbf" ) );
         sExtensions << QStringLiteral( "osm" ) << QStringLiteral( "pbf" );
       }
+      else if ( driverName.startsWith( QLatin1String( "FlatGeobuf" ) ) )
+      {
+        sFileFilters += createFileFilter_( QObject::tr( "FlatGeobuf" ), QStringLiteral( "*.fgb" ) );
+        sExtensions << QStringLiteral( "fgb" );
+      }
       else if ( driverName.startsWith( QLatin1String( "SUA" ) ) )
       {
         sFileFilters += createFileFilter_( QObject::tr( "Special Use Airspace Format" ), QStringLiteral( "*.sua" ) );
