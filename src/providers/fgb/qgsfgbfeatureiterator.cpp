@@ -123,7 +123,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     mDataStream = mSource->getDataStream(mFile);
   }
 
-  if (mIndexPos == 0) {
+  /*if (mIndexPos == 0) {
     QgsDebugMsg(QString("Index search for %1").arg(mFilterRect.toString()));
     mIndices = mSource->mProvider->mTree->search(
       mFilterRect.xMinimum(),
@@ -137,24 +137,29 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
     QgsDebugMsg(QString("Iteration end at mIndexPos %1").arg(mIndexPos));
     close();
     return false;
-  }
+  }*/
 
-  auto i = mIndices[mIndexPos];
-
-  //QgsDebugMsg(QString("mIndices[mIndexPos] %1 ").arg(mIndices[mIndexPos]));
+  //auto i = mIndices[mIndexPos];
   //auto featureOffset = mSource->mProvider->mFeatureOffsets[i];
-  auto featureOffset = mSource->mProvider->mFeatureOffsets[i];
-  //QgsDebugMsg(QString("featureOffset %1 ").arg(featureOffset));
-  //QgsDebugMsg(QString("featureOffset 0 %1 ").arg(mSource->mProvider->mFeatureOffsets[0]));
-  //QgsDebugMsg(QString("featureOffset 1 %1 ").arg(mSource->mProvider->mFeatureOffsets[1]));
-  //QgsDebugMsg(QString("mSource->mFeatureOffset %1 ").arg(mSource->mFeatureOffset));
-  //QgsDebugMsg(QString("device pos %1 ").arg(mDataStream->device()->pos()));
-  auto res = mDataStream->device()->seek(mSource->mFeatureOffset + featureOffset);
 
-  if (!res) {
+  /*
+  QgsDebugMsg(QString("mIndices[mIndexPos] %1 ").arg(mIndices[mIndexPos]));
+  QgsDebugMsg(QString("featureOffset %1 ").arg(featureOffset));
+  QgsDebugMsg(QString("featureOffset 0 %1 ").arg(mSource->mProvider->mFeatureOffsets[0]));
+  QgsDebugMsg(QString("featureOffset 1 %1 ").arg(mSource->mProvider->mFeatureOffsets[1]));
+  QgsDebugMsg(QString("mSource->mFeatureOffset %1 ").arg(mSource->mFeatureOffset));
+  QgsDebugMsg(QString("device pos %1 ").arg(mDataStream->device()->pos()));
+  */
+
+  //auto res = mDataStream->device()->seek(mSource->mFeatureOffset + featureOffset);
+  bool res;
+  if (mFeaturePos == 0)
+    res = mDataStream->device()->seek(mSource->mFeatureOffset);
+
+  /*if (!res) {
     QgsDebugMsg(QString("Unexpected seek failure (offset %1)").arg(mSource->mFeatureOffset + featureOffset));
     return false;
-  }
+  }*/
 
   uint32_t featureSize;
   mDataStream->readRawData((char*) &featureSize, 4);
@@ -219,14 +224,14 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   }
   */
 
-  /*if (mFeaturePos >= mSource->mFeatureCount-1 || mDataStream->atEnd() ) {
+  if (mFeaturePos >= mSource->mProvider->mFeatureCount-1 || mDataStream->atEnd() ) {
     QgsLogger::debug("At end, closing iterator");
     close();
     return false;
   }
-  mFeaturePos++;*/
+  mFeaturePos++;
 
-  mIndexPos++;
+  //mIndexPos++;
   return true;
 }
 
