@@ -11,7 +11,8 @@ SET (FGB_SRCS
 )
 
 SET (FGB_MOC_HDRS
-  flatgeobuf_generated.h
+  header_generated.h
+  feature_generated.h
   packedrtree.cpp
   qgsfgbprovider.h
 )

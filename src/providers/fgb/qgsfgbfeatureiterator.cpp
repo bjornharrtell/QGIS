@@ -25,8 +25,6 @@
 #include "qgsmessagelog.h"
 #include "qgsexception.h"
 
-#include "flatgeobuf_generated.h"
-
 #include <limits>
 #include <cstring>
 
@@ -180,8 +178,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   }*/
 
   auto f = GetRoot<Feature>(featureBuf);
-  auto geometry = f->geometry();
-  auto qgsAbstractGeometry = readGeometry(geometry, mSource->mDimensions);
+  auto qgsAbstractGeometry = readGeometry(f, mSource->mDimensions);
   feature.setId(f->fid());
 
   delete[] featureBuf;
@@ -280,10 +277,10 @@ QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *coords, uint32_t co
   return polygon;
 }
 
-QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Geometry* geometry, uint8_t dimensions)
+QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Feature* feature, uint8_t dimensions)
 {
-  auto coords = geometry->coords()->data();
-  auto coordsLength = geometry->coords()->Length();
+  auto coords = feature->coords()->data();
+  auto coordsLength = feature->coords()->Length();
   //auto lengths = geometry->lengths();
   //auto lengthsLength = lengths->Length();
   switch (mSource->mGeometryType) {
@@ -292,7 +289,7 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Geometry* geometr
     case GeometryType::LineString:
       return readLineString(coords, coordsLength, dimensions);
     case GeometryType::Polygon:
-      return readPolygon(coords, coordsLength, geometry->ring_lengths(), dimensions);
+      return readPolygon(coords, coordsLength, feature->ring_lengths(), dimensions);
     default: {
       QgsLogger::warning("Unknown geometry type");
       return nullptr;

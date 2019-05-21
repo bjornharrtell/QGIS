@@ -20,7 +20,7 @@
 #include "qgsvectordataprovider.h"
 #include "qgsfields.h"
 
-#include "flatgeobuf_generated.h"
+#include "header_generated.h"
 #include "packedrtree.h"
 
 using namespace flatbuffers;

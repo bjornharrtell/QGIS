@@ -22,6 +22,9 @@
 #include "qgsfeatureiterator.h"
 #include "qgsfgbprovider.h"
 
+#include "header_generated.h"
+#include "feature_generated.h"
+
 class QgsFgbProvider;
 
 
@@ -68,7 +71,7 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
     bool readFid( QgsFeature &feature );
     QgsLineString *readLineString(const double *coords, uint32_t coordsLength, uint8_t dimensions, uint32_t offset = 0);
     QgsPolygon *readPolygon(const double *coords, uint32_t coordsLength, const Vector<uint32_t> *ringLengths, uint8_t dimensions);
-    QgsAbstractGeometry* readGeometry(const Geometry* geometry, uint8_t dimensions);
+    QgsAbstractGeometry* readGeometry(const Feature* geometry, uint8_t dimensions);
 
     bool mFetchedFid = false;
 
