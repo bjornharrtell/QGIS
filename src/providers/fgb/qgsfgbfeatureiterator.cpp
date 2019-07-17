@@ -150,17 +150,17 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   */
 
   //auto res = mDataStream->device()->seek(mSource->mFeatureOffset + featureOffset);
-  bool res;
+  //bool res;
   if (mFeaturePos == 0)
-    res = mDataStream->device()->seek(mSource->mFeatureOffset);
+    mDataStream->device()->seek(mSource->mFeatureOffset);
 
   /*if (!res) {
     QgsDebugMsg(QString("Unexpected seek failure (offset %1)").arg(mSource->mFeatureOffset + featureOffset));
     return false;
   }*/
 
-  uint32_t featureSize;
-  mDataStream->readRawData((char*) &featureSize, 4);
+  int featureSize;
+  mDataStream->readRawData(reinterpret_cast<char *>(&featureSize), 4);
   char *featureBuf = new char[featureSize];
   mDataStream->readRawData(featureBuf, featureSize);
 
@@ -178,8 +178,8 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   }*/
 
   auto f = GetRoot<Feature>(featureBuf);
-  auto qgsAbstractGeometry = readGeometry(f, 2);
-  feature.setId(f->fid());
+  auto qgsAbstractGeometry = readGeometry(f);
+  feature.setId(static_cast<QgsFeatureId>(f->fid()));
 
   delete[] featureBuf;
   QgsGeometry qgsGeometry(qgsAbstractGeometry);
@@ -232,40 +232,38 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   return true;
 }
 
-QgsLineString *QgsFgbFeatureIterator::readLineString(const double *xy, uint32_t xyLength, uint8_t dimensions, uint32_t offset)
+QgsLineString *QgsFgbFeatureIterator::readLineString(const double *xy, uint32_t xyLength, uint32_t offset)
 {
-  auto dimLength = xyLength >> 1;
-  auto x = QVector<double>(dimLength);
+  auto x = QVector<double>(xyLength >> 1);
   auto xd = x.data();
-  auto y = QVector<double>(dimLength);
+  auto y = QVector<double>(xyLength >> 1);
   auto yd = y.data();
   auto z = QVector<double>();
   auto m = QVector<double>();
   unsigned int c = 0;
-  for (std::vector<double>::size_type i = offset; i < offset + xyLength; i = i + 2) {
+  for (std::vector<double>::size_type i = offset; i < offset + xyLength; i += 2) {
     xd[c] = xy[i];
-    yd[c] = xy[i+1];
+    yd[c] = xy[i + 1];
     c++;
   }
   auto qgsLineString = new QgsLineString(x, y, z, m, false);
   return qgsLineString;
 }
 
-QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *xy, uint32_t xyLength, const Vector<uint32_t> *ends, uint8_t dimensions)
+QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *xy, uint32_t xyLength, const Vector<uint32_t> *ends)
 {
-  QVector<QgsCurve *> rings;
+  auto ringCount = ends != nullptr ? ends->size() : 1;
+  QVector<QgsCurve *> rings(static_cast<int>(ringCount));
 
-  if (ends != nullptr) {
-    size_t offset = 0;
-    for (size_t i = 0; i < ends->size(); i++) {
-      auto end = ends->Get(i) << 1;
-      auto ring = readLineString(xy, end, dimensions, offset);
-      rings.append(ring);
-      offset += end;
+  if (ringCount > 1) {
+    uint32_t s = 0;
+    for (uint32_t i = 0; i < ringCount; i++) {
+      auto e = ends->Get(i) << 1;
+      rings.append(readLineString(xy, e, s));
+      s = e;
     }
   } else {
-    auto ring = readLineString(xy, xyLength, dimensions);
-    rings.append(ring);
+    rings.append(readLineString(xy, xyLength));
   }
 
   auto polygon = new QgsPolygon();
@@ -277,7 +275,7 @@ QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *xy, uint32_t xyLeng
   return polygon;
 }
 
-QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Feature* feature, uint8_t dimensions)
+QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Feature* feature)
 {
   auto xy = feature->xy()->data();
   auto xyLength = feature->xy()->Length();
@@ -285,9 +283,9 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Feature* feature,
     case GeometryType::Point:
       return new QgsPoint(xy[0], xy[1]);
     case GeometryType::LineString:
-      return readLineString(xy, xyLength, dimensions);
+      return readLineString(xy, xyLength);
     case GeometryType::Polygon:
-      return readPolygon(xy, xyLength, feature->ends(), dimensions);
+      return readPolygon(xy, xyLength, feature->ends());
     default: {
       QgsLogger::warning("Unknown geometry type");
       return nullptr;
@@ -295,13 +293,13 @@ QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Feature* feature,
   }
 }
 
-bool QgsFgbFeatureIterator::readFid( QgsFeature &feature )
+bool QgsFgbFeatureIterator::readFid( QgsFeature &/*feature*/ )
 {
   if (mFetchedFid)
     return false;
 
   mFetchedFid = true;
-  QgsFeatureId fid = mRequest.filterFid();
+  //QgsFeatureId fid = mRequest.filterFid();
 
   return false;
 }
@@ -328,7 +326,7 @@ QFile* QgsFgbFeatureSource::getFile()
 QDataStream* QgsFgbFeatureSource::getDataStream(QFile* file)
 {
   auto dataStream = new QDataStream(file);
-  dataStream->skipRawData(mFeatureOffset);
+  dataStream->skipRawData(static_cast<int>(mFeatureOffset));
   return dataStream;
 }
 

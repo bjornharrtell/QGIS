@@ -68,9 +68,9 @@ class QgsFgbFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsFgb
     QDataStream* mDataStream;
 
     bool readFid( QgsFeature &feature );
-    QgsLineString *readLineString(const double *coords, uint32_t coordsLength, uint8_t dimensions, uint32_t offset = 0);
-    QgsPolygon *readPolygon(const double *coords, uint32_t coordsLength, const Vector<uint32_t> *ringLengths, uint8_t dimensions);
-    QgsAbstractGeometry* readGeometry(const Feature* geometry, uint8_t dimensions);
+    QgsLineString *readLineString(const double *xy, uint32_t xyLength, uint32_t offset = 0);
+    QgsPolygon *readPolygon(const double *xy, uint32_t xyLength, const Vector<uint32_t> *ends);
+    QgsAbstractGeometry* readGeometry(const Feature* geometry);
 
     bool mFetchedFid = false;
 

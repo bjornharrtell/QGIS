@@ -238,9 +238,9 @@ class QgsFgbSourceSelectProvider : public QgsSourceSelectProvider
   public:
 
     QString providerKey() const override { return QStringLiteral( "fgb" ); }
-    QString text() const override { return QObject::tr( "Vector" ); }
+    QString text() const override { return QObject::tr( "FlatGeobuf" ); }
     int ordering() const override { return QgsSourceSelectProvider::OrderLocalProvider + 20; }
-    QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddVectorLayer.svg" ) ); }
+    QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddFgbLayer.svg" ) ); }
     QgsAbstractDataSourceWidget *createDataSourceWidget( QWidget *parent = nullptr, Qt::WindowFlags fl = Qt::Widget, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::Embedded ) const override
     {
       return new QgsFgbSourceSelect( parent, fl, widgetMode );

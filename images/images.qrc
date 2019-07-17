@@ -195,6 +195,7 @@
         <file>themes/default/mActionAddPolyline.svg</file>
         <file>themes/default/mActionAddBasicRectangle.svg</file>
         <file>themes/default/mActionAddBasicTriangle.svg</file>
+        <file>themes/default/mActionAddFgbLayer.svg</file>
         <file>themes/default/mActionAddGroup.svg</file>
         <file>themes/default/mActionAddHtml.svg</file>
         <file>themes/default/mActionAddImage.svg</file>
@@ -454,6 +455,7 @@
         <file>themes/default/mIconExpressionPreview.svg</file>
         <file>themes/default/mIconExpressionSelect.svg</file>
         <file>themes/default/mIconFavourites.svg</file>
+        <file>themes/default/mIconFgb.svg</file>
         <file>themes/default/mIconFieldDate.svg</file>
         <file>themes/default/mIconFieldDateTime.svg</file>
         <file>themes/default/mIconFieldFloat.svg</file>
