@@ -42,7 +42,6 @@ class QgsFgbFeatureSource : public QgsAbstractFeatureSource
     QString mFileName;
     uint32_t mFeatureOffset;
     GeometryType mGeometryType;
-    uint8_t mDimensions;
     QgsFields mFields;
     QgsCoordinateReferenceSystem mCrs;
 

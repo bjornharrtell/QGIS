@@ -6498,7 +6498,7 @@ bool QgisApp::openLayer( const QString &fileName, bool allowInteractive )
     }
     else
     {
-      if (fileInfo.completeSuffix() == "fgb")
+      if (fileName.endsWith( QLatin1String( ".fgb" ), Qt::CaseInsensitive ))
         ok = ok || addVectorLayerPrivate( fileName, fileInfo.completeBaseName(), QStringLiteral( "fgb" ), false );
       else
         ok = ok || addVectorLayerPrivate( fileName, fileInfo.completeBaseName(), QStringLiteral( "ogr" ), false );

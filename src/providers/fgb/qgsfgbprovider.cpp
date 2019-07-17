@@ -47,11 +47,10 @@
 #include "qgsfgbsourceselect.h"
 #endif
 
+const QString QgsFgbProvider::TEXT_PROVIDER_KEY = QStringLiteral( "fgb" );
+const QString QgsFgbProvider::TEXT_PROVIDER_DESCRIPTION = QStringLiteral( "FlatGeobuf provider" );
 
-const QString FGB_KEY = QStringLiteral( "fgb" );
-
-const QString FGB_DESCRIPTION = QObject::tr( "FlatGeobuf format provider" );
-
+uint8_t magicbytes[] = { 0x66, 0x67, 0x62, 0x00, 0x66, 0x67, 0x62, 0x00 };
 
 QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &options )
   : QgsVectorDataProvider( uri, options )
@@ -68,12 +67,9 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   }
 
   auto dataStream = new QDataStream(&file);
-  char magicbytes[4];
-  dataStream->readRawData(magicbytes, 4);
-  if (!(magicbytes[0] == 0x66 &&
-        magicbytes[1] == 0x67 &&
-        magicbytes[2] == 0x62 &&
-        magicbytes[3] == 0x00)) {
+  char bytes[8];
+  dataStream->readRawData(bytes, 8);
+  if (memcmp(bytes, magicbytes, sizeof(magicbytes))) {
     QgsLogger::warning( QObject::tr( "%1 does not appear to be a FlatGeobuf file" ).arg( uri ) );
     return;
   }
@@ -89,22 +85,25 @@ QgsFgbProvider::QgsFgbProvider( const QString &uri, const ProviderOptions &optio
   auto header = flatbuffers::GetRoot<FlatGeobuf::Header>(headerBuf);
   mFeatureCount = header->features_count();
   mGeometryType = header->geometry_type();
-  mDimensions = header->dimensions();
   mEnvelope = std::vector<double>(header->envelope()->data(), header->envelope()->data() + 4);
   mWkbType = toWkbType(mGeometryType);
   QgsDebugMsg("Header parsed");
 
-  uint64_t treeSize = PackedRTree::size(mFeatureCount);
-  char *treeBuf = new char[treeSize];
-  QgsDebugMsg(QString("Index size is %1").arg(treeSize));
-  dataStream->readRawData(treeBuf, treeSize);
-  mTree = new PackedRTree(treeBuf, mFeatureCount);
-  QgsDebugMsg("Index parsed");
+  uint64_t treeSize = 0;
+  if (header->index_node_size() == 16) {
+    treeSize = PackedRTree::size(mFeatureCount);
+    char *treeBuf = new char[treeSize];
+    QgsDebugMsg(QString("Index size is %1").arg(treeSize));
+    dataStream->readRawData(treeBuf, treeSize);
+    mTree = new PackedRTree(treeBuf, mFeatureCount);
+    QgsDebugMsg("Index parsed");
+  }
+
   mFeatureOffsets = new uint64_t[mFeatureCount];
   dataStream->readRawData((char *) mFeatureOffsets, mFeatureCount * 8);
   QgsDebugMsg(QString("Feature offsets read (size %1)").arg(mFeatureCount * 8));
 
-  mFeatureOffset = 4 + headerSize + 4 + treeSize + mFeatureCount * 8;
+  mFeatureOffset = 8 + headerSize + 4 + treeSize + mFeatureCount * 8;
 
   delete dataStream;
   file.close();
@@ -190,14 +189,22 @@ QgsFeatureIterator QgsFgbProvider::getFeatures( const QgsFeatureRequest &request
 
 QString QgsFgbProvider::name() const
 {
-  return FGB_KEY;
+  return TEXT_PROVIDER_KEY;
 } // QgsFgbProvider::name()
 
 
 QString QgsFgbProvider::description() const
 {
-  return FGB_DESCRIPTION;
+  return TEXT_PROVIDER_KEY;
 } // QgsFgbProvider::description()
+
+
+QVariantMap QgsFgbProviderMetadata::decodeUri( const QString &uri )
+{
+  QVariantMap components;
+  components.insert( QStringLiteral( "path" ), QUrl( uri ).toLocalFile() );
+  return components;
+}
 
 
 QgsCoordinateReferenceSystem QgsFgbProvider::crs() const
@@ -206,43 +213,22 @@ QgsCoordinateReferenceSystem QgsFgbProvider::crs() const
 }
 
 
-/**
- * Class factory to return a pointer to a newly created
- * QgsFgbProvider object
- */
-QGISEXTERN QgsFgbProvider *classFactory( const QString *uri, const QgsDataProvider::ProviderOptions &options )
+QgsDataProvider *QgsFgbProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options )
 {
-  return new QgsFgbProvider( *uri, options );
+  return new QgsFgbProvider( uri, options );
 }
 
 
-/**
- * Required key function (used to map the plugin to a data store type)
-*/
-QGISEXTERN QString providerKey()
+QGISEXTERN QgsProviderMetadata *providerMetadataFactory()
 {
-  return FGB_KEY;
+  return new QgsFgbProviderMetadata();
 }
 
 
-/**
- * Required description function
- */
-QGISEXTERN QString description()
+QgsFgbProviderMetadata::QgsFgbProviderMetadata():
+  QgsProviderMetadata( QgsFgbProvider::TEXT_PROVIDER_KEY, QgsFgbProvider::TEXT_PROVIDER_DESCRIPTION )
 {
-  return FGB_DESCRIPTION;
 }
-
-
-/**
- * Required isProvider function. Used to determine if this shared library
- * is a data provider plugin
- */
-QGISEXTERN bool isProvider()
-{
-  return true;
-}
-
 
 
 #ifdef HAVE_GUI
@@ -269,6 +255,28 @@ QGISEXTERN QList<QgsSourceSelectProvider *> *sourceSelectProviders()
       << new QgsFgbSourceSelectProvider;
 
   return providers;
+}
+
+class QgsFgbProviderGuiMetadata: public QgsProviderGuiMetadata
+{
+  public:
+    QgsFgbProviderGuiMetadata()
+      : QgsProviderGuiMetadata( QgsFgbProvider::TEXT_PROVIDER_KEY )
+    {
+    }
+
+    QList<QgsSourceSelectProvider *> sourceSelectProviders() override
+    {
+      QList<QgsSourceSelectProvider *> providers;
+      providers << new QgsFgbSourceSelectProvider;
+      return providers;
+    }
+};
+
+
+QGISEXTERN QgsProviderGuiMetadata *providerGuiMetadataFactory()
+{
+  return new QgsFgbProviderGuiMetadata();
 }
 
 #endif

@@ -19,6 +19,7 @@
 
 #include "qgsvectordataprovider.h"
 #include "qgsfields.h"
+#include "qgsprovidermetadata.h"
 
 #include "header_generated.h"
 #include "packedrtree.h"
@@ -44,6 +45,9 @@ class QgsFgbProvider : public QgsVectorDataProvider
     Q_OBJECT
 
   public:
+    static const QString TEXT_PROVIDER_KEY;
+    static const QString TEXT_PROVIDER_DESCRIPTION;
+
     explicit QgsFgbProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options );
     ~QgsFgbProvider() override;
 
@@ -70,7 +74,6 @@ class QgsFgbProvider : public QgsVectorDataProvider
     QString mFileName;
     uint64_t mFeatureCount;
     GeometryType mGeometryType;
-    uint8_t mDimensions;
     QgsWkbTypes::Type mWkbType;
     uint32_t mFeatureOffset;
     std::vector<double> mEnvelope;
@@ -85,5 +88,14 @@ class QgsFgbProvider : public QgsVectorDataProvider
     friend class QgsFgbFeatureSource;
     friend class QgsFgbFeatureIterator;
 };
+
+class QgsFgbProviderMetadata: public QgsProviderMetadata
+{
+  public:
+    QgsFgbProviderMetadata();
+    QgsDataProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options ) override;
+    QVariantMap decodeUri( const QString &uri ) override;
+};
+
 
 #endif

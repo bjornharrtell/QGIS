@@ -178,7 +178,7 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   }*/
 
   auto f = GetRoot<Feature>(featureBuf);
-  auto qgsAbstractGeometry = readGeometry(f, mSource->mDimensions);
+  auto qgsAbstractGeometry = readGeometry(f, 2);
   feature.setId(f->fid());
 
   delete[] featureBuf;
@@ -232,9 +232,9 @@ bool QgsFgbFeatureIterator::fetchFeature( QgsFeature &feature )
   return true;
 }
 
-QgsLineString *QgsFgbFeatureIterator::readLineString(const double *coords, uint32_t coordsLength, uint8_t dimensions, uint32_t offset)
+QgsLineString *QgsFgbFeatureIterator::readLineString(const double *xy, uint32_t xyLength, uint8_t dimensions, uint32_t offset)
 {
-  auto dimLength = coordsLength / dimensions;
+  auto dimLength = xyLength >> 1;
   auto x = QVector<double>(dimLength);
   auto xd = x.data();
   auto y = QVector<double>(dimLength);
@@ -242,29 +242,29 @@ QgsLineString *QgsFgbFeatureIterator::readLineString(const double *coords, uint3
   auto z = QVector<double>();
   auto m = QVector<double>();
   unsigned int c = 0;
-  for (std::vector<double>::size_type i = offset; i < offset + coordsLength; i = i + 2) {
-    xd[c] = coords[i];
-    yd[c] = coords[i+1];
+  for (std::vector<double>::size_type i = offset; i < offset + xyLength; i = i + 2) {
+    xd[c] = xy[i];
+    yd[c] = xy[i+1];
     c++;
   }
   auto qgsLineString = new QgsLineString(x, y, z, m, false);
   return qgsLineString;
 }
 
-QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *coords, uint32_t coordsLength, const Vector<uint32_t> *ringLengths, uint8_t dimensions)
+QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *xy, uint32_t xyLength, const Vector<uint32_t> *ends, uint8_t dimensions)
 {
   QVector<QgsCurve *> rings;
 
-  if (ringLengths != nullptr) {
+  if (ends != nullptr) {
     size_t offset = 0;
-    for (size_t i = 0; i < ringLengths->size(); i++) {
-      auto ringLength = ringLengths->Get(i);
-      auto ring = readLineString(coords, ringLength, dimensions, offset);
+    for (size_t i = 0; i < ends->size(); i++) {
+      auto end = ends->Get(i) << 1;
+      auto ring = readLineString(xy, end, dimensions, offset);
       rings.append(ring);
-      offset += ringLength;
+      offset += end;
     }
   } else {
-    auto ring = readLineString(coords, coordsLength, dimensions);
+    auto ring = readLineString(xy, xyLength, dimensions);
     rings.append(ring);
   }
 
@@ -279,17 +279,15 @@ QgsPolygon *QgsFgbFeatureIterator::readPolygon(const double *coords, uint32_t co
 
 QgsAbstractGeometry* QgsFgbFeatureIterator::readGeometry(const Feature* feature, uint8_t dimensions)
 {
-  auto coords = feature->coords()->data();
-  auto coordsLength = feature->coords()->Length();
-  //auto lengths = geometry->lengths();
-  //auto lengthsLength = lengths->Length();
+  auto xy = feature->xy()->data();
+  auto xyLength = feature->xy()->Length();
   switch (mSource->mGeometryType) {
     case GeometryType::Point:
-      return new QgsPoint(coords[0], coords[1]);
+      return new QgsPoint(xy[0], xy[1]);
     case GeometryType::LineString:
-      return readLineString(coords, coordsLength, dimensions);
+      return readLineString(xy, xyLength, dimensions);
     case GeometryType::Polygon:
-      return readPolygon(coords, coordsLength, feature->ring_lengths(), dimensions);
+      return readPolygon(xy, xyLength, feature->ends(), dimensions);
     default: {
       QgsLogger::warning("Unknown geometry type");
       return nullptr;
@@ -312,7 +310,6 @@ QgsFgbFeatureSource::QgsFgbFeatureSource( const QgsFgbProvider *p )
   : mFileName( p->mFileName )
   , mFeatureOffset( p->mFeatureOffset )
   , mGeometryType( p->mGeometryType )
-  , mDimensions( p->mDimensions )
   , mFields( p->attributeFields )
   , mCrs( p->crs() )
   , mProvider (p)
